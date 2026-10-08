@@ -1,0 +1,443 @@
+import assert from "node:assert/strict";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+import { gzipSync } from "node:zlib";
+import test from "node:test";
+import { cssLength, fontFaces, pageRequests, pickCandidate, slotWidth, textByFace, wireBytes } from "../scripts/check-delivery-speed.mjs";
+
+const templateRoot = resolve(import.meta.dirname, "..");
+
+function write(root, path, contents) {
+  const target = join(root, path);
+  mkdirSync(resolve(target, ".."), { recursive: true });
+  writeFileSync(target, contents);
+}
+
+function run(root, script) {
+  return spawnSync(process.execPath, [join(root, "scripts", script), "--root", root], {
+    cwd: root,
+    encoding: "utf8"
+  });
+}
+
+function configure(root) {
+  const configPath = join(root, "agent-development.config.json");
+  const config = JSON.parse(readFileSync(configPath, "utf8"));
+  config.projectSlug = "demo-project";
+  config.phase = "implementation";
+  config.performance = {
+    outputDirectory: "dist", entryPages: ["index.html"],
+    allowedExtensions: [".html", ".js", ".css", ".woff2", ".svg", ".png", ".webp", ".jpg"],
+    delivery: { baseline: "delivery-baseline.json", tolerance: 0.03,
+      connection: { downloadKbps: 1600, rttMs: 150 },
+      viewport: { cssWidth: 390, cssHeight: 844, dpr: 2 } }
+  };
+  config.projectChecks = [{
+    name: "real project smoke",
+    command: ["node", "-e", "process.exit(0)"]
+  }];
+  // The fixture builds its own synthetic output.
+  config.performance.outputDirectory = "dist";
+  config.performance.entryPages = ["index.html"];
+  config.performance.delivery.baseline = "delivery-baseline.json";
+  writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+  const owners = readFileSync(join(root, ".github/CODEOWNERS"), "utf8")
+    .replaceAll("replace-with-owner", "owner");
+  writeFileSync(join(root, ".github/CODEOWNERS"), owners);
+}
+
+function deconfigure(root) {
+  // Restore placeholders to exercise unconfigured implementation rejection.
+  const configPath = join(root, "agent-development.config.json");
+  const config = JSON.parse(readFileSync(configPath, "utf8"));
+  config.projectSlug = "replace-me";
+  config.phase = "implementation";
+  config.projectChecks = [];
+  writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+  const owners = readFileSync(join(root, ".github/CODEOWNERS"), "utf8")
+    .replaceAll("@kiaquila", "@replace-with-owner");
+  writeFileSync(join(root, ".github/CODEOWNERS"), owners);
+}
+
+function makeFixture({ configured = true } = {}) {
+  const root = mkdtempSync(join(tmpdir(), "agent-development-"));
+  cpSync(templateRoot, root, { recursive: true });
+  /* In a linked worktree `.git` is a file pointing at the real repository,
+     and a copy of it still points there: the fixture's `git add -A` below
+     then staged the demo configuration into the worktree's own index. The
+     fixture gets a repository of its own. */
+  rmSync(join(root, ".git"), { recursive: true, force: true });
+  if (configured) configure(root); else deconfigure(root);
+  const git = spawnSync("git", ["init", "-q"], { cwd: root, encoding: "utf8" });
+  assert.equal(git.status, 0, git.stderr);
+  const add = spawnSync("git", ["add", "-A"], { cwd: root, encoding: "utf8" });
+  assert.equal(add.status, 0, add.stderr);
+  write(root, "dist/index.html", "<!doctype html><title>Demo</title><script src=\"/app.js\" defer></script>\n");
+  write(root, "dist/app.js", "document.documentElement.dataset.ready = 'true';\n");
+  return root;
+}
+
+function recordBaseline(root) {
+  const result = spawnSync(process.execPath, [join(root, "scripts/check-delivery-speed.mjs"), "--root", root, "--update"], {
+    cwd: root,
+    encoding: "utf8"
+  });
+  assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(readFileSync(join(root, "delivery-baseline.json"), "utf8"));
+}
+
+function withFixture(options, callback) {
+  const root = makeFixture(options);
+  try {
+    callback(root);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+test("the untouched reference requires deliberate project configuration", () => {
+  withFixture({ configured: false }, (root) => {
+    const result = run(root, "check-repository.mjs");
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /projectSlug must be replaced/);
+    assert.match(result.stderr, /projectChecks must contain at least one real/);
+    assert.match(result.stderr, /CODEOWNERS placeholder/);
+  });
+});
+
+test("bootstrap explicitly permits infrastructure-only validation", () => {
+  withFixture({}, (root) => {
+    write(root, "agent-development.config.json", JSON.stringify({
+      schemaVersion: 1, projectSlug: "demo-project", phase: "bootstrap",
+      projectChecks: [], performance: null
+    }));
+    for (const script of ["check-repository.mjs", "run-project-checks.mjs"]) {
+      const result = run(root, script);
+      assert.equal(result.status, 0, result.stderr);
+    }
+    const result = run(root, "check-delivery-speed.mjs");
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Configure performance and the application build/);
+  });
+});
+
+test("implementation cannot silently retain bootstrap checks", () => {
+  withFixture({}, (root) => {
+    write(root, "agent-development.config.json", JSON.stringify({
+      schemaVersion: 1, projectSlug: "demo-project", phase: "implementation",
+      projectChecks: [], performance: null
+    }));
+    const result = run(root, "check-repository.mjs");
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /projectChecks must contain at least one real/);
+    assert.match(result.stderr, /performance configuration is required/);
+  });
+});
+
+test("configured repository, project commands, and delivery check pass", () => {
+  withFixture({}, (root) => {
+    recordBaseline(root);
+    for (const script of [
+      "check-repository.mjs",
+      "run-project-checks.mjs",
+      "check-delivery-speed.mjs"
+    ]) {
+      const result = run(root, script);
+      assert.equal(result.status, 0, `${script}\n${result.stderr}`);
+    }
+  });
+});
+
+test("project commands are executed directly and failures propagate", () => {
+  withFixture({}, (root) => {
+    const path = join(root, "agent-development.config.json");
+    const config = JSON.parse(readFileSync(path, "utf8"));
+    config.projectChecks = [{ name: "failing test", command: ["node", "-e", "process.exit(7)"] }];
+    writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`);
+    const result = run(root, "run-project-checks.mjs");
+    assert.equal(result.status, 7);
+  });
+});
+
+test("a build with no recorded baseline says how to record one", () => {
+  withFixture({}, (root) => {
+    const result = run(root, "check-delivery-speed.mjs");
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /No baseline at delivery-baseline\.json; run check-delivery-speed\.mjs --update/);
+  });
+});
+
+test("a slower first paint than the baseline fails and names what grew", () => {
+  withFixture({}, (root) => {
+    const baseline = recordBaseline(root);
+    /* Random bytes do not compress, so 47 KiB of them is 47 KiB on the wire:
+       at 1600 kbps that is 240 ms on a first paint of a few hundred. */
+    write(root, "dist/index.html", randomBytes(47 * 1024));
+    const result = run(root, "check-delivery-speed.mjs");
+    assert.equal(result.status, 1);
+    const [, ms] = result.stderr.match(/index\.html first paint (\d+) ms is [\d.]+% slower than the (\d+) ms baseline/) ?? [];
+    assert.ok(ms, result.stderr);
+    assert.ok(Number(ms) > baseline.pages["index.html"].firstPaint.ms);
+    assert.match(result.stderr, /\(index\.html \+[\d,]+ B\)/);
+    assert.match(result.stderr, /--update/);
+  });
+});
+
+test("growth inside the tolerance passes, and a gain is offered as the new baseline", () => {
+  withFixture({}, (root) => {
+    recordBaseline(root);
+    /* Well under 3% of the modelled first paint (a few hundred bytes of
+       compressible markup is a millisecond or two). */
+    write(root, "dist/index.html", "<!doctype html><title>Demo</title><script src=\"/app.js\" defer></script><p>hello</p>\n");
+    let result = run(root, "check-delivery-speed.mjs");
+    assert.equal(result.status, 0, result.stderr);
+
+    write(root, "dist/index.html", randomBytes(20 * 1024));
+    recordBaseline(root);
+    write(root, "dist/index.html", "<!doctype html><title>Demo</title>\n");
+    result = run(root, "check-delivery-speed.mjs");
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /faster than the .* baseline — run --update/);
+  });
+});
+
+test("every request is counted as its own gzip response", () => {
+  /* One shared stream would let a later file reuse an earlier one's
+     dictionary, so two copies of the same text would look like one. */
+  const script = "document.documentElement.dataset.ready = 'true';\n".repeat(400);
+  const markup = `<!doctype html><title>Demo</title><script src="/app.js" defer></script><script>${script}</script>\n`;
+  const own = wireBytes("index.html", Buffer.from(markup)) + wireBytes("app.js", Buffer.from(script));
+  const shared = gzipSync(Buffer.concat([Buffer.from(markup), Buffer.from(script)]), { level: 6 }).length;
+  assert.ok(shared < own);
+  withFixture({}, (root) => {
+    write(root, "dist/index.html", markup);
+    write(root, "dist/app.js", script);
+    const baseline = recordBaseline(root);
+    const counted = Object.values(baseline.pages["index.html"].fullLoad.bytes).reduce((total, size) => total + size, 0);
+    assert.equal(counted, own);
+  });
+});
+
+test("the page's requests are read from its markup and stylesheet", () => {
+  const html = `<!doctype html>
+    <link rel="preload" as="font" href="/assets/fonts/latin.woff2" crossorigin>
+    <link rel="stylesheet" href="/assets/styles.css?v=abc123">
+    <link rel="icon" href="/assets/favicon.svg?v=6">
+    <picture><source srcset="/assets/hero-520.webp 520w, /assets/hero-1040.webp 1040w"><img src="/assets/hero-520.jpg" alt="" fetchpriority="high"></picture>
+    <picture><source srcset="/assets/card-800.webp 800w"><img src="/assets/card-800.jpg" alt="" loading="lazy"></picture>
+    <img src="/assets/logo.svg" alt=""><img src="/assets/later.png" alt="" loading="lazy">
+    <body><p>Plain text</p><p class="hand">by hand</p><p class="serif">serif</p>
+    <script src="/assets/site.js?v=def456" defer></script></body>`;
+  const css = `@font-face { font-family: A; src: url("/assets/fonts/latin.woff2"); unicode-range: U+0000-00FF; }
+    @font-face { font-family: A; src: url("/assets/fonts/cyrillic.woff2"); unicode-range: U+0400-045F; }
+    @font-face { font-family: B; src: url("/assets/fonts/hand.woff2"); unicode-range: U+00??; }
+    @font-face { font-family: C; src: url("/assets/fonts/any.woff2"); }
+    @font-face { font-family: D; src: url("/assets/fonts/unused.woff2"); }
+    body { font-family: A, sans-serif; } .hand { font-family: B; } .serif { font-family: C; }`;
+  const phone = { cssWidth: 390, cssHeight: 844, dpr: 2 };
+  const requests = pageRequests(html, (path) => (path === "assets/styles.css" ? css : null), phone);
+  /* The eager picture has no sizes, so its slot is the viewport: 390 × 2 =
+     780 device pixels, which the 1040w candidate is the first to cover. */
+  assert.deepEqual(requests.firstPaint, [
+    "assets/fonts/latin.woff2",
+    "assets/hero-1040.webp",
+    "assets/logo.svg",
+    "assets/styles.css"
+  ]);
+  /* The Cyrillic face covers no text on the page and family D sets none,
+     so a browser never asks for either; the preloaded face is already in
+     the first ring. */
+  assert.deepEqual(requests.fullLoad, ["assets/fonts/any.woff2", "assets/fonts/hand.woff2", "assets/site.js"]);
+});
+
+test("a lazy image on the first screen is charged to the full load", () => {
+  const html = `<!doctype html><body>
+    <section class="hero">
+      <picture><source srcset="/assets/calm-776.webp 776w"><img src="/assets/calm-776.jpg" alt="" fetchpriority="high"></picture>
+      <picture><source srcset="/assets/wink-776.webp 776w"><img src="/assets/wink-776.jpg" alt="" loading="lazy"></picture>
+      <img src="/assets/badge.png" alt="" loading="lazy">
+    </section>
+    <section><picture><source srcset="/assets/card-800.webp 800w"><img src="/assets/card-800.jpg" alt="" loading="lazy"></picture></section>
+  </body>`;
+  const requests = pageRequests(html, () => null, { cssWidth: 390, cssHeight: 844, dpr: 2 });
+  assert.deepEqual(requests.firstPaint, ["assets/calm-776.webp"]);
+  assert.deepEqual(requests.fullLoad, ["assets/badge.png", "assets/wink-776.webp"]);
+});
+
+test("a responsive image is charged at the candidate the modelled phone fetches", () => {
+  /* Taking the first srcset entry charged the 520w portrait to a phone that
+     asks for the 776w one, so the larger file could grow unseen (Codex
+     review, 2026-09-18). The browser's choice is reproduced instead: the
+     slot `sizes` gives the viewport, times the pixel ratio, covered by the
+     smallest candidate that can. */
+  const phone = { cssWidth: 390, cssHeight: 844, dpr: 2 };
+  const laptop = { cssWidth: 1280, cssHeight: 800, dpr: 1 };
+  assert.equal(cssLength("min(84vw, 416px)", phone), 327.6);
+  assert.equal(cssLength("calc(42vw - 220px)", laptop), 317.6);
+  assert.equal(cssLength("clamp(3.375rem, 6vw, 6.25rem)", laptop), 76.8);
+  assert.equal(cssLength("54svh", phone), 455.76);
+  assert.throws(() => cssLength("url(x)", phone));
+
+  const hero = "(max-width: 1099px) min(84vw, 416px), min(54svh, calc(42vw - 220px))";
+  assert.equal(slotWidth(hero, phone), 327.6);
+  assert.equal(slotWidth(hero, laptop), Math.min(432, 317.6));
+  assert.equal(slotWidth("(min-width:900px) min(38vw,470px), (max-width:719px) 86vw, 44vw", phone), 335.4);
+  assert.equal(slotWidth("(min-width:900px) min(38vw,470px), (max-width:719px) 86vw, 44vw", { cssWidth: 800, cssHeight: 600, dpr: 1 }), 352);
+  assert.equal(slotWidth(undefined, phone), 390);
+
+  const srcset = "/assets/portrait/calm-520.webp?v=2 520w, /assets/portrait/calm-776.webp?v=2 776w";
+  assert.equal(pickCandidate(srcset, hero, phone), "/assets/portrait/calm-776.webp?v=2");
+  assert.equal(pickCandidate(srcset, hero, laptop), "/assets/portrait/calm-520.webp?v=2");
+  /* Nothing covers 1200 × 2, so the largest is fetched. */
+  assert.equal(pickCandidate(srcset, "100vw", { cssWidth: 1200, cssHeight: 800, dpr: 2 }), "/assets/portrait/calm-776.webp?v=2");
+  assert.equal(pickCandidate("/a.png, /b.png 2x", "100vw", phone), "/a.png");
+});
+
+test("a face is fetched for the text its own family and style set, not any text", () => {
+  /* The Cyrillic in a work summary is Manrope's; charging Playfair's
+     Cyrillic files for it put 44 KB in the baseline that no browser fetches
+     (Codex review, 2026-09-18). The cascade is read far enough to tell. */
+  const phone = { cssWidth: 390, cssHeight: 844, dpr: 2 };
+  const css = `
+    :root { --font-body: "Manrope", sans-serif; --font-serif: "Playfair Display", serif; --font-hand: "Caveat", cursive; }
+    body { font-family: var(--font-body); }
+    h1, .numeral { font-family: var(--font-serif); }
+    .band-mail { font-family: var(--font-serif); font-style: italic; }
+    .hand-line { font-family: var(--font-hand); }
+    .card .kicker { font-family: inherit; }
+    @media (min-width: 900px) { .wide-only { font-family: var(--font-hand); } }
+    @media (max-width: 899px) { .narrow-only { font-family: var(--font-hand); } }
+    @font-face { font-family: "Manrope"; src: url("/m-latin.woff2"); unicode-range: U+0000-00FF; }
+    @font-face { font-family: "Manrope"; src: url("/m-cyr.woff2"); unicode-range: U+0400-045F; }
+    @font-face { font-family: "Playfair Display"; font-style: normal; src: url("/p-latin.woff2"); unicode-range: U+0000-00FF; }
+    @font-face { font-family: "Playfair Display"; font-style: normal; src: url("/p-cyr.woff2"); unicode-range: U+0400-045F; }
+    @font-face { font-family: "Playfair Display"; font-style: italic; src: url("/p-it-latin.woff2"); unicode-range: U+0000-00FF; }
+    @font-face { font-family: "Caveat"; src: url("/c-latin.woff2"); unicode-range: U+0000-00FF; }`;
+  const html = `<!doctype html><html><head><title>Кириллица в заголовке не рисуется</title></head><body>
+    <h1>Heading</h1>
+    <p class="card"><span class="kicker">Redesign of «ИИ по делу»</span> — <em>plain</em></p>
+    <p class="numeral">01</p>
+    <a class="band-mail" href="mailto:x">demo@example.com</a>
+    <p class="hand-line"><span>Let's</span> <span>go.</span></p>
+    <p class="wide-only">Desk</p><p class="narrow-only">Phone</p>
+    <script>var cyrillic = "не текст";</script>
+    <svg><text>не текст</text></svg>
+    </body></html>`;
+  const runs = textByFace(html, css, phone);
+  const has = (key, ch) => runs.get(key)?.has(ch.codePointAt(0)) ?? false;
+  assert.equal(has("manrope|normal", "И"), true, "the summary's Cyrillic is Manrope's");
+  assert.equal(has("manrope|italic", "p"), true, "em inside body text is Manrope italic");
+  assert.equal(has("playfair display|normal", "И"), false, "no Playfair text is Cyrillic");
+  assert.equal(has("playfair display|normal", "0"), true);
+  assert.equal(has("playfair display|italic", "@"), true);
+  assert.equal(has("caveat|normal", "L"), true);
+  assert.equal(has("caveat|normal", "P"), true, "the narrow-only rule applies to the phone");
+  assert.equal(has("caveat|normal", "D"), false, "the wide-only rule does not");
+  assert.equal(has("manrope|normal", "D"), true);
+  for (const set of runs.values()) assert.equal(set.has("н".codePointAt(0)), false, "script, svg and head text is not rendered");
+
+  const fetched = fontFaces(css)
+    .filter((face) => runs.get(`${face.family}|${face.style}`)?.size)
+    .map((face) => face.url);
+  assert.deepEqual(fetched, ["/m-latin.woff2", "/m-cyr.woff2", "/p-latin.woff2", "/p-cyr.woff2", "/p-it-latin.woff2", "/c-latin.woff2"]);
+});
+
+test("unexpected deployable file types fail", () => {
+  withFixture({}, (root) => {
+    recordBaseline(root);
+    write(root, "dist/video.mp4", "not really a video\n");
+    const result = run(root, "check-delivery-speed.mjs");
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Unexpected deployable file type \.mp4/);
+  });
+});
+
+test("repository policy rejects unpinned actions", () => {
+  withFixture({}, (root) => {
+    const path = join(root, ".github/workflows/ci.yml");
+    const workflow = readFileSync(path, "utf8")
+      .replace(/actions\/checkout@[a-f0-9]{40}/, "actions/checkout@v4");
+    writeFileSync(path, workflow);
+    const result = run(root, "check-repository.mjs");
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /not pinned to a full SHA/);
+  });
+});
+
+test("the harness stays out of GitHub language statistics", () => {
+  withFixture({}, (root) => {
+    write(root, "src/app.js", "document.documentElement.dataset.ready = 'true';\n");
+    const attribute = (path) => spawnSync("git", ["check-attr", "linguist-vendored", "--", path], {
+      cwd: root,
+      encoding: "utf8"
+    }).stdout.trim();
+    for (const harness of [
+      "scripts/check-delivery-speed.mjs",
+      "scripts/check-repository.mjs",
+      "scripts/config.mjs",
+      "scripts/run-project-checks.mjs",
+      "tests/harness.test.mjs"
+    ]) {
+      assert.equal(attribute(harness), `${harness}: linguist-vendored: set`);
+    }
+    assert.equal(attribute("src/app.js"), "src/app.js: linguist-vendored: unspecified");
+  });
+});
+
+test("the dependency update policy and language rules are required", () => {
+  withFixture({}, (root) => {
+    rmSync(join(root, ".gitattributes"));
+    rmSync(join(root, ".github/dependabot.yml"));
+    const result = run(root, "check-repository.mjs");
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Missing harness file: \.gitattributes/);
+    assert.match(result.stderr, /Missing harness file: \.github\/dependabot\.yml/);
+  });
+});
+
+test("dependabot groups minor and patch updates behind a cooldown", () => {
+  const [, actions, npm, ...extra] = readFileSync(join(templateRoot, ".github/dependabot.yml"), "utf8")
+    .split(/^\s*- package-ecosystem:/m);
+  assert.equal(extra.length, 0);
+  assert.match(actions, /^\s*"github-actions"/);
+  assert.match(npm, /^\s*"npm"/);
+  for (const ecosystem of [actions, npm]) {
+    assert.match(ecosystem, /interval: "weekly"/);
+    assert.match(ecosystem, /default-days: 7/);
+    assert.match(ecosystem, /update-types:\s*\n\s*- "minor"\s*\n\s*- "patch"/);
+    assert.doesNotMatch(ecosystem, /"major"/);
+  }
+  // Action tags are not guaranteed to be semantic versions.
+  assert.doesNotMatch(actions, /semver-[a-z]+-days/);
+  assert.match(npm, /semver-major-days: 14/);
+  assert.match(npm, /semver-minor-days: 7/);
+  assert.match(npm, /semver-patch-days: 3/);
+});
+
+test("the OSV scan reports findings and fails the workflow", () => {
+  const workflow = readFileSync(join(templateRoot, ".github/workflows/ci.yml"), "utf8");
+  assert.match(workflow, /osv-scanner-action@[a-f0-9]{40}/);
+  assert.match(workflow, /osv-reporter-action@[a-f0-9]{40}/);
+  const cleanup = workflow.indexOf("rm -f -- osv-results.json");
+  const scanner = workflow.indexOf("osv-scanner-action@");
+  assert.ok(cleanup >= 0 && cleanup < scanner);
+  assert.match(workflow, /id: scan/);
+  assert.match(workflow, /\[ ! -s "\$\{RESULTS\}" \]/);
+  assert.match(workflow, /--gh-annotations=true/);
+  assert.match(workflow, /--fail-on-vuln=true/);
+});
+
+test("configuration paths cannot escape the repository", () => {
+  withFixture({}, (root) => {
+    const path = join(root, "agent-development.config.json");
+    const config = JSON.parse(readFileSync(path, "utf8"));
+    config.projectChecks[0].cwd = "../outside";
+    writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`);
+    const result = run(root, "check-repository.mjs");
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /must stay inside the repository/);
+  });
+});

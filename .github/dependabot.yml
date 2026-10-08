@@ -1,0 +1,50 @@
+# Weekly dependency updates for a agent development repository.
+#
+# Minor and patch updates arrive as one grouped pull request; major updates
+# stay separate so they are reviewed individually. The cooldown keeps a freshly
+# published version out of the repository for a few days.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    # Action tags are not guaranteed to be semantic versions, so only the
+    # default cooldown applies to this ecosystem.
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions-minor-and-patch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Watch the root manifest so future application dependencies are covered.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
+    groups:
+      npm-minor-and-patch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

@@ -46,6 +46,7 @@ jobs:
           scan-args: |-
             --format=json
             --output=osv-results.json
+            --allow-no-lockfiles
             --recursive
             .
         continue-on-error: true

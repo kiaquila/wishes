@@ -425,6 +425,7 @@ test("the OSV scan reports findings and fails the workflow", () => {
   const scanner = workflow.indexOf("osv-scanner-action@");
   assert.ok(cleanup >= 0 && cleanup < scanner);
   assert.match(workflow, /id: scan/);
+  assert.match(workflow, /--allow-no-lockfiles/);
   assert.match(workflow, /\[ ! -s "\$\{RESULTS\}" \]/);
   assert.match(workflow, /--gh-annotations=true/);
   assert.match(workflow, /--fail-on-vuln=true/);

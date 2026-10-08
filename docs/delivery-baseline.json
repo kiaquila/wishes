@@ -1,0 +1,42 @@
+{
+  "connection": {
+    "downloadKbps": 1600,
+    "rttMs": 150
+  },
+  "viewport": {
+    "cssWidth": 390,
+    "cssHeight": 844,
+    "dpr": 2
+  },
+  "pages": {
+    "index.html": {
+      "firstPaint": {
+        "ms": 1066,
+        "bytes": {
+          "index.html": 1489,
+          "assets/crane-kimono-192.webp": 4892,
+          "assets/hydrogel-patches-192.webp": 8534,
+          "assets/rose-jam-768.webp": 37902,
+          "assets/velvet-pouch-192.webp": 7014,
+          "items.js": 1090,
+          "styles.css": 2294
+        }
+      },
+      "fullLoad": {
+        "ms": 1271,
+        "bytes": {
+          "index.html": 1489,
+          "assets/crane-kimono-192.webp": 4892,
+          "assets/hydrogel-patches-192.webp": 8534,
+          "assets/rose-jam-768.webp": 37902,
+          "assets/velvet-pouch-192.webp": 7014,
+          "items.js": 1090,
+          "styles.css": 2294,
+          "app.js": 1919,
+          "assets/fonts/manrope-cyrillic.woff2": 14544,
+          "assets/fonts/manrope-latin.woff2": 24576
+        }
+      }
+    }
+  }
+}

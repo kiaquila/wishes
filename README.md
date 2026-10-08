@@ -14,6 +14,10 @@ left/right keyboard keys (when focused), and horizontal swipes select wishes.
 The chosen layout is remembered in this browser. Edit `site/items.js` to add
 wishes and put photographs in `site/assets/`.
 
+Production is `https://wishes.ks-design.art`. Successful reviewed merges to
+main deploy automatically after CI; see `docs/production.md` for the hosting,
+deployment checks and recovery path.
+
 The agent development harness was adapted from
 `kiaquila/ks` at commit `3599591bf5d75d88e60a6e87d097e182f314a32e`.
 No product assets, hosting configuration or production credentials were

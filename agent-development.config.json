@@ -1,7 +1,21 @@
 {
   "schemaVersion": 1,
   "projectSlug": "wishes",
-  "phase": "bootstrap",
-  "projectChecks": [],
-  "performance": null
+  "phase": "implementation",
+  "projectChecks": [
+    { "name": "Build wishlist", "command": ["npm", "run", "build"] },
+    { "name": "Check browser JavaScript", "command": ["node", "--check", "site/app.js"] },
+    { "name": "Test wishlist", "command": ["npm", "run", "test:site"] }
+  ],
+  "performance": {
+    "outputDirectory": "dist",
+    "entryPages": ["index.html"],
+    "allowedExtensions": [".html", ".css", ".js", ".webp", ".woff2", ".txt"],
+    "delivery": {
+      "baseline": "docs/delivery-baseline.json",
+      "tolerance": 0.05,
+      "connection": { "downloadKbps": 1600, "rttMs": 150 },
+      "viewport": { "cssWidth": 390, "cssHeight": 844, "dpr": 2 }
+    }
+  }
 }

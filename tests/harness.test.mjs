@@ -75,6 +75,8 @@ function makeFixture({ configured = true } = {}) {
   assert.equal(git.status, 0, git.stderr);
   const add = spawnSync("git", ["add", "-A"], { cwd: root, encoding: "utf8" });
   assert.equal(add.status, 0, add.stderr);
+  // Synthetic delivery fixtures must not inherit the real application's output.
+  rmSync(join(root, "dist"), { recursive: true, force: true });
   write(root, "dist/index.html", "<!doctype html><title>Demo</title><script src=\"/app.js\" defer></script>\n");
   write(root, "dist/app.js", "document.documentElement.dataset.ready = 'true';\n");
   return root;

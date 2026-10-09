@@ -74,6 +74,8 @@ test('a same-named success from another workflow cannot authenticate the AI gate
   await assert.rejects(assertCodexCheckProvenance(api, sha), /trusted gate job/);
   job.check_run_url = 'https://api.github.com/repos/kiaquila/wishes/check-runs/1';
   await assertCodexCheckProvenance(api, sha);
+  run.path += '@refs/heads/main';
+  await assertCodexCheckProvenance(api, sha);
 });
 
 test('production independently requires the owner request, marker and current-head bot evidence', async () => {
@@ -119,6 +121,7 @@ test('a duplicate Project CI workflow and unrelated same-named checks cannot rel
   await assert.rejects(assertProjectCIProvenance(api, sha, 'push', '42'), /validate does not belong/);
   jobs[0].check_run_url = 'https://api.github.com/repos/kiaquila/wishes/check-runs/1';
   await assertProjectCIProvenance(api, sha, 'push', '42');
+  run.path += '@main';
   await assertProjectCIProvenance(api, sha, 'push');
   run.event = 'pull_request';
   await assertProjectCIProvenance(api, sha, 'pull_request');

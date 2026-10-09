@@ -11,6 +11,11 @@ import {
 const DEFAULT_INTERVAL_MS = 15_000;
 const DEFAULT_ATTEMPTS = 120;
 
+// GitHub may qualify workflow paths with an @ref suffix.
+export function workflowFile(path) {
+  return typeof path === 'string' ? path.split('@', 1)[0] : '';
+}
+
 // Contexts this repository actually publishes on a push to main. The
 // production deploy workflow must never list itself here.
 export const PUSH_CHECKS = Object.freeze([
@@ -168,7 +173,7 @@ export async function assertCodexCheckProvenance(api, sha) {
     throw new Error('Codex check has untrusted provenance.');
   }
   const run = await api.request(`/repos/${api.repository}/actions/runs/${runId}`);
-  if (run.path !== '.github/workflows/codex-review.yml' || run.conclusion !== 'success' ||
+  if (workflowFile(run.path) !== '.github/workflows/codex-review.yml' || run.conclusion !== 'success' ||
       run.repository?.full_name !== api.repository) throw new Error('Codex check is not from the trusted gate workflow.');
   if (run.event === 'pull_request' && run.head_sha === sha) {
     const jobs = await api.request(`/repos/${api.repository}/actions/runs/${runId}/jobs?per_page=100`);
@@ -185,7 +190,7 @@ export async function assertProjectCIProvenance(api, sha, event, triggeringRunId
   const response = await api.request(`${base}/actions/workflows/ci.yml/runs?head_sha=${sha}&event=${event}&per_page=100`);
   const run = response.workflow_runs?.filter(item => item.head_sha === sha && item.event === event)
     .sort((left, right) => Number(right.id) - Number(left.id))[0];
-  if (!run || run.path !== '.github/workflows/ci.yml' || run.repository?.full_name !== api.repository ||
+  if (!run || workflowFile(run.path) !== '.github/workflows/ci.yml' || run.repository?.full_name !== api.repository ||
       run.status !== 'completed' || run.conclusion !== 'success' ||
       (triggeringRunId && String(run.id) !== String(triggeringRunId))) {
     throw new Error('Production requires the exact successful canonical Project CI run.');

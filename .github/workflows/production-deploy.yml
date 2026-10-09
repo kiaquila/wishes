@@ -23,6 +23,8 @@ jobs:
     permissions:
       contents: read
       checks: read
+      actions: read
+      issues: read
       pull-requests: read
     outputs:
       revision: ${{ steps.revision.outputs.sha }}

@@ -2,6 +2,11 @@
 
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import {
+  isAcceptableCodexSummaryComment, isStrictlyAfterCodexReviewRequest,
+  latestCodexNativeReviewResult, latestCodexReviewRequestMarker,
+  latestTrustedCodexReviewCommand
+} from './codex-review-helpers.mjs';
 
 const DEFAULT_INTERVAL_MS = 15_000;
 const DEFAULT_ATTEMPTS = 120;
@@ -121,6 +126,60 @@ export async function assertResolvedThreads(api, number) {
   } while (cursor);
 }
 
+async function listPaginated(api, path) {
+  const items = [];
+  for (let page = 1; ; page++) {
+    const batch = await api.request(`${path}?per_page=100&page=${page}`);
+    if (!Array.isArray(batch)) throw new Error('Invalid GitHub evidence response.');
+    items.push(...batch);
+    if (batch.length < 100) return items;
+  }
+}
+
+export async function assertTrustedCodexEvidence(api, pull) {
+  const base = `/repos/${api.repository}`;
+  const comments = await listPaginated(api, `${base}/issues/${pull.number}/comments`);
+  const marker = latestCodexReviewRequestMarker(comments, pull.head.sha);
+  const command = latestTrustedCodexReviewCommand(comments, [], pull.head.sha);
+  if (!marker || !command || marker.sourceCommentId !== command.sourceCommentId ||
+      marker.sourceCommentCreatedAt !== command.sourceCommentCreatedAt) {
+    throw new Error('Missing trusted current-head Codex request and matching marker.');
+  }
+  const [reviews, reviewComments] = await Promise.all([
+    listPaginated(api, `${base}/pulls/${pull.number}/reviews`),
+    listPaginated(api, `${base}/pulls/${pull.number}/comments`)
+  ]);
+  const result = latestCodexNativeReviewResult(
+    reviews.filter(review => isStrictlyAfterCodexReviewRequest(review.submitted_at, marker)),
+    reviewComments, pull.head.sha
+  );
+  if (result === 'fail' || (result !== 'pass' && !comments.some(comment =>
+    isAcceptableCodexSummaryComment(comment, pull.head.sha, command.sourceCommentCreatedAt, command.sourceCommentId)))) {
+    throw new Error('Missing or blocking current-head evidence from the trusted Codex bot.');
+  }
+}
+
+export async function assertCodexCheckProvenance(api, sha) {
+  const check = latestChecksByName(await checkRuns(api, sha)).get('Codex Review');
+  const prefix = `https://github.com/${api.repository}/actions/runs/`;
+  const suffix = check?.details_url?.startsWith(prefix) ? check.details_url.slice(prefix.length) : '';
+  const runId = suffix.match(/^(\d+)(?:\/job\/\d+)?$/)?.[1];
+  if (check?.app?.slug !== 'github-actions' || !runId || check.head_sha !== sha) {
+    throw new Error('Codex check has untrusted provenance.');
+  }
+  const run = await api.request(`/repos/${api.repository}/actions/runs/${runId}`);
+  if (run.path !== '.github/workflows/codex-review.yml' || run.conclusion !== 'success' ||
+      run.repository?.full_name !== api.repository) throw new Error('Codex check is not from the trusted gate workflow.');
+  if (run.event === 'pull_request' && run.head_sha === sha) {
+    const jobs = await api.request(`/repos/${api.repository}/actions/runs/${runId}/jobs?per_page=100`);
+    if (!jobs.jobs?.some(job => job.name === 'Codex Review' &&
+      job.check_run_url === `https://api.github.com/repos/${api.repository}/check-runs/${check.id}` &&
+      job.conclusion === 'success')) throw new Error('Codex check does not belong to the trusted gate job.');
+  } else if (!(run.event === 'workflow_dispatch' && run.head_branch === 'main')) {
+    throw new Error('Codex gate ran on an untrusted event or revision.');
+  }
+}
+
 const delay = (milliseconds) =>
   new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds));
 
@@ -189,6 +248,8 @@ async function main() {
     attempts: 1,
     intervalMs: 0
   });
+  await assertCodexCheckProvenance(api, pullRequest.head.sha);
+  await assertTrustedCodexEvidence(api, pullRequest);
   await assertResolvedThreads(api, pullRequest.number);
   const latest = await api.request(`/repos/${repository}/commits/main`);
   if (latest.sha !== targetSha) throw new Error(`Stale production candidate: main is ${latest.sha}.`);

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { spawnSync } from 'node:child_process';
-import { assertResolvedThreads, evaluateRequiredChecks, selectMergedPullRequest, waitForRequiredChecks } from '../scripts/wait-for-production-checks.mjs';
+import { assertCodexCheckProvenance, assertTrustedCodexEvidence, assertResolvedThreads, evaluateRequiredChecks, selectMergedPullRequest, waitForRequiredChecks } from '../scripts/wait-for-production-checks.mjs';
+import { createCodexReviewRequestMarkerBody } from '../scripts/codex-review-helpers.mjs';
 
 const sha = 'a'.repeat(40);
 const checked = name => ({ name, id: 1, status: 'completed', conclusion: 'success' });
@@ -56,4 +57,46 @@ test('the SSH entrypoint refuses shells, injected commands and short SHAs', () =
     assert.equal(result.status, 1);
     assert.match(result.stderr, /Only deploy/);
   }
+});
+
+test('a same-named success from another workflow cannot authenticate the AI gate', async () => {
+  const check = { ...checked('Codex Review'), head_sha: sha, app: { slug: 'github-actions' },
+    details_url: 'https://github.com/kiaquila/wishes/actions/runs/42/job/7' };
+  const run = { path: '.github/workflows/fake.yml', conclusion: 'success', event: 'pull_request',
+    head_sha: sha, repository: { full_name: 'kiaquila/wishes' } };
+  const job = { name: 'Codex Review', conclusion: 'success',
+    check_run_url: 'https://api.github.com/repos/kiaquila/wishes/check-runs/1' };
+  const api = { repository: 'kiaquila/wishes', request: async path =>
+    path.includes('check-runs?') ? { check_runs: [check] } : path.includes('/jobs?') ? { jobs: [job] } : run };
+  await assert.rejects(assertCodexCheckProvenance(api, sha), /trusted gate workflow/);
+  run.path = '.github/workflows/codex-review.yml';
+  job.check_run_url += '99';
+  await assert.rejects(assertCodexCheckProvenance(api, sha), /trusted gate job/);
+  job.check_run_url = 'https://api.github.com/repos/kiaquila/wishes/check-runs/1';
+  await assertCodexCheckProvenance(api, sha);
+});
+
+test('production independently requires the owner request, marker and current-head bot evidence', async () => {
+  const requestedAt = '2026-10-08T20:00:00Z';
+  const command = { id: 1, created_at: requestedAt, user: { login: 'owner', type: 'User' },
+    author_association: 'OWNER', body: `@codex review ${sha}` };
+  const marker = { id: 2, user: { login: 'github-actions[bot]' }, body: createCodexReviewRequestMarkerBody({
+    headSha: sha, requestId: 'r', sourceCommentId: '1', sourceCommentCreatedAt: requestedAt, requestedAt }) };
+  const bot = { id: 3, created_at: '2026-10-08T20:01:00Z', user: { login: 'chatgpt-codex-connector[bot]' },
+    body: `Codex Review: Didn't find any major issues.\n**Reviewed commit:** \`${sha.slice(0,10)}\`` };
+  let comments = [command, marker];
+  let reviews = [];
+  const api = { repository: 'kiaquila/wishes', request: async path =>
+    path.includes('/issues/') ? comments : path.includes('/reviews?') ? reviews : [] };
+  const pull = { number: 2, head: { sha } };
+  await assert.rejects(assertTrustedCodexEvidence(api, pull), /trusted Codex bot/);
+  comments.push({ ...bot, user: { login: 'spoof' } });
+  await assert.rejects(assertTrustedCodexEvidence(api, pull), /trusted Codex bot/);
+  comments = [command, marker, bot];
+  await assertTrustedCodexEvidence(api, pull);
+  reviews = [{ id: 4, commit_id: sha, user: bot.user, state: 'CHANGES_REQUESTED', submitted_at: '2026-10-08T20:02:00Z' }];
+  await assert.rejects(assertTrustedCodexEvidence(api, pull), /blocking/);
+  reviews = [];
+  comments = [marker, bot];
+  await assert.rejects(assertTrustedCodexEvidence(api, pull), /request/);
 });

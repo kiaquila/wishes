@@ -62,14 +62,18 @@ test('the SSH entrypoint refuses shells, injected commands and short SHAs', () =
 test('a same-named success from another workflow cannot authenticate the AI gate', async () => {
   const check = { ...checked('Codex Review'), head_sha: sha, app: { slug: 'github-actions' },
     details_url: 'https://github.com/kiaquila/wishes/actions/runs/42/job/7' };
-  const run = { path: '.github/workflows/fake.yml', conclusion: 'success', event: 'pull_request',
+  const run = { workflow_id: 99, path: '.github/workflows/fake.yml', conclusion: 'success', event: 'pull_request',
     head_sha: sha, repository: { full_name: 'kiaquila/wishes' } };
   const job = { name: 'Codex Review', conclusion: 'success',
     check_run_url: 'https://api.github.com/repos/kiaquila/wishes/check-runs/1' };
   const api = { repository: 'kiaquila/wishes', request: async path =>
-    path.includes('check-runs?') ? { check_runs: [check] } : path.includes('/jobs?') ? { jobs: [job] } : run };
-  await assert.rejects(assertCodexCheckProvenance(api, sha), /trusted gate workflow/);
+    path.endsWith('/workflows/codex-review.yml') ? { id: 10, path: '.github/workflows/codex-review.yml' } :
+      path.includes('check-runs?') ? { check_runs: [check] } : path.includes('/jobs?') ? { jobs: [job] } : run };
+  await assert.rejects(assertCodexCheckProvenance(api, sha), /canonical workflow identity/);
+  run.path = '.github/workflows/codex-review.yml@spoof.yml';
+  await assert.rejects(assertCodexCheckProvenance(api, sha), /canonical workflow identity/);
   run.path = '.github/workflows/codex-review.yml';
+  run.workflow_id = 10;
   job.check_run_url += '99';
   await assert.rejects(assertCodexCheckProvenance(api, sha), /trusted gate job/);
   job.check_run_url = 'https://api.github.com/repos/kiaquila/wishes/check-runs/1';
@@ -104,14 +108,15 @@ test('production independently requires the owner request, marker and current-he
 });
 
 test('a duplicate Project CI workflow and unrelated same-named checks cannot release production', async () => {
-  const run = { id: 42, path: '.github/workflows/ci.yml', head_sha: sha, event: 'push',
+  const run = { id: 42, workflow_id: 10, path: '.github/workflows/ci.yml', head_sha: sha, event: 'push',
     status: 'completed', conclusion: 'success', repository: { full_name: 'kiaquila/wishes' } };
   const checks = ['validate', 'osv-scan'].map((name, index) => ({ ...checked(name), id: index + 1,
     head_sha: sha, app: { slug: 'github-actions' } }));
   const jobs = checks.map(check => ({ name: check.name, status: 'completed', conclusion: 'success',
     check_run_url: `https://api.github.com/repos/kiaquila/wishes/check-runs/${check.id}` }));
   const api = { repository: 'kiaquila/wishes', request: async path =>
-    path.includes('/workflows/ci.yml/runs?') ? { workflow_runs: [run] } :
+    path.endsWith('/workflows/ci.yml') ? { id: 10, path: '.github/workflows/ci.yml' } :
+      path.includes('/workflows/ci.yml/runs?') ? { workflow_runs: [run] } :
       path.includes('/jobs?') ? { jobs } : { check_runs: checks } };
   await assert.rejects(assertProjectCIProvenance(api, sha, 'push', '99'), /canonical Project CI/);
   run.conclusion = 'failure';

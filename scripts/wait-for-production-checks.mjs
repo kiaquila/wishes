@@ -11,9 +11,13 @@ import {
 const DEFAULT_INTERVAL_MS = 15_000;
 const DEFAULT_ATTEMPTS = 120;
 
-// GitHub may qualify workflow paths with an @ref suffix.
-export function workflowFile(path) {
-  return typeof path === 'string' ? path.split('@', 1)[0] : '';
+async function assertWorkflowIdentity(api, run, file) {
+  // Workflow IDs are unambiguous even when a filename contains @ or the run
+  // path is qualified with @ref. Resolve the canonical file through GitHub.
+  const workflow = await api.request(`/repos/${api.repository}/actions/workflows/${file}`);
+  if (workflow.path !== `.github/workflows/${file}` || !workflow.id || run.workflow_id !== workflow.id) {
+    throw new Error('Run does not belong to the canonical workflow identity.');
+  }
 }
 
 // Contexts this repository actually publishes on a push to main. The
@@ -173,7 +177,8 @@ export async function assertCodexCheckProvenance(api, sha) {
     throw new Error('Codex check has untrusted provenance.');
   }
   const run = await api.request(`/repos/${api.repository}/actions/runs/${runId}`);
-  if (workflowFile(run.path) !== '.github/workflows/codex-review.yml' || run.conclusion !== 'success' ||
+  await assertWorkflowIdentity(api, run, 'codex-review.yml');
+  if (run.conclusion !== 'success' ||
       run.repository?.full_name !== api.repository) throw new Error('Codex check is not from the trusted gate workflow.');
   if (run.event === 'pull_request' && run.head_sha === sha) {
     const jobs = await api.request(`/repos/${api.repository}/actions/runs/${runId}/jobs?per_page=100`);
@@ -190,11 +195,12 @@ export async function assertProjectCIProvenance(api, sha, event, triggeringRunId
   const response = await api.request(`${base}/actions/workflows/ci.yml/runs?head_sha=${sha}&event=${event}&per_page=100`);
   const run = response.workflow_runs?.filter(item => item.head_sha === sha && item.event === event)
     .sort((left, right) => Number(right.id) - Number(left.id))[0];
-  if (!run || workflowFile(run.path) !== '.github/workflows/ci.yml' || run.repository?.full_name !== api.repository ||
+  if (!run || run.repository?.full_name !== api.repository ||
       run.status !== 'completed' || run.conclusion !== 'success' ||
       (triggeringRunId && String(run.id) !== String(triggeringRunId))) {
     throw new Error('Production requires the exact successful canonical Project CI run.');
   }
+  await assertWorkflowIdentity(api, run, 'ci.yml');
   const jobs = await api.request(`${base}/actions/runs/${run.id}/jobs?per_page=100`);
   const checks = await checkRuns(api, sha);
   for (const name of PUSH_CHECKS) {

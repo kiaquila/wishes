@@ -180,6 +180,29 @@ export async function assertCodexCheckProvenance(api, sha) {
   }
 }
 
+export async function assertProjectCIProvenance(api, sha, event, triggeringRunId = '') {
+  const base = `/repos/${api.repository}`;
+  const response = await api.request(`${base}/actions/workflows/ci.yml/runs?head_sha=${sha}&event=${event}&per_page=100`);
+  const run = response.workflow_runs?.filter(item => item.head_sha === sha && item.event === event)
+    .sort((left, right) => Number(right.id) - Number(left.id))[0];
+  if (!run || run.path !== '.github/workflows/ci.yml' || run.repository?.full_name !== api.repository ||
+      run.status !== 'completed' || run.conclusion !== 'success' ||
+      (triggeringRunId && String(run.id) !== String(triggeringRunId))) {
+    throw new Error('Production requires the exact successful canonical Project CI run.');
+  }
+  const jobs = await api.request(`${base}/actions/runs/${run.id}/jobs?per_page=100`);
+  const checks = await checkRuns(api, sha);
+  for (const name of PUSH_CHECKS) {
+    const job = jobs.jobs?.find(item => item.name === name);
+    const check = checks.find(item => job?.check_run_url === `https://api.github.com${base}/check-runs/${item.id}`);
+    if (!job || job.conclusion !== 'success' || job.status !== 'completed' ||
+        check?.name !== name || check.head_sha !== sha || check.app?.slug !== 'github-actions' ||
+        check.status !== 'completed' || check.conclusion !== 'success') {
+      throw new Error(`${name} does not belong to the exact successful canonical CI run.`);
+    }
+  }
+}
+
 const delay = (milliseconds) =>
   new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds));
 
@@ -230,6 +253,7 @@ async function main() {
 
   const api = new GitHubApi(repository, process.env.GITHUB_TOKEN);
   await waitForRequiredChecks({ api, sha: targetSha, requiredNames: PUSH_CHECKS });
+  await assertProjectCIProvenance(api, targetSha, 'push', process.env.TRIGGERING_CI_RUN_ID || '');
 
   const pullRequests = await api.request(
     `/repos/${repository}/commits/${encodeURIComponent(targetSha)}/pulls?per_page=100`
@@ -248,6 +272,7 @@ async function main() {
     attempts: 1,
     intervalMs: 0
   });
+  await assertProjectCIProvenance(api, pullRequest.head.sha, 'pull_request');
   await assertCodexCheckProvenance(api, pullRequest.head.sha);
   await assertTrustedCodexEvidence(api, pullRequest);
   await assertResolvedThreads(api, pullRequest.number);

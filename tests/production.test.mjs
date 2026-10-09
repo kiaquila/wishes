@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { spawnSync } from 'node:child_process';
-import { assertCodexCheckProvenance, assertTrustedCodexEvidence, assertResolvedThreads, evaluateRequiredChecks, selectMergedPullRequest, waitForRequiredChecks } from '../scripts/wait-for-production-checks.mjs';
+import { assertProjectCIProvenance, assertCodexCheckProvenance, assertTrustedCodexEvidence, assertResolvedThreads, evaluateRequiredChecks, selectMergedPullRequest, waitForRequiredChecks } from '../scripts/wait-for-production-checks.mjs';
 import { createCodexReviewRequestMarkerBody } from '../scripts/codex-review-helpers.mjs';
 
 const sha = 'a'.repeat(40);
@@ -99,4 +99,27 @@ test('production independently requires the owner request, marker and current-he
   reviews = [];
   comments = [marker, bot];
   await assert.rejects(assertTrustedCodexEvidence(api, pull), /request/);
+});
+
+test('a duplicate Project CI workflow and unrelated same-named checks cannot release production', async () => {
+  const run = { id: 42, path: '.github/workflows/ci.yml', head_sha: sha, event: 'push',
+    status: 'completed', conclusion: 'success', repository: { full_name: 'kiaquila/wishes' } };
+  const checks = ['validate', 'osv-scan'].map((name, index) => ({ ...checked(name), id: index + 1,
+    head_sha: sha, app: { slug: 'github-actions' } }));
+  const jobs = checks.map(check => ({ name: check.name, status: 'completed', conclusion: 'success',
+    check_run_url: `https://api.github.com/repos/kiaquila/wishes/check-runs/${check.id}` }));
+  const api = { repository: 'kiaquila/wishes', request: async path =>
+    path.includes('/workflows/ci.yml/runs?') ? { workflow_runs: [run] } :
+      path.includes('/jobs?') ? { jobs } : { check_runs: checks } };
+  await assert.rejects(assertProjectCIProvenance(api, sha, 'push', '99'), /canonical Project CI/);
+  run.conclusion = 'failure';
+  await assert.rejects(assertProjectCIProvenance(api, sha, 'push', '42'), /canonical Project CI/);
+  run.conclusion = 'success';
+  jobs[0].check_run_url += '99';
+  await assert.rejects(assertProjectCIProvenance(api, sha, 'push', '42'), /validate does not belong/);
+  jobs[0].check_run_url = 'https://api.github.com/repos/kiaquila/wishes/check-runs/1';
+  await assertProjectCIProvenance(api, sha, 'push', '42');
+  await assertProjectCIProvenance(api, sha, 'push');
+  run.event = 'pull_request';
+  await assertProjectCIProvenance(api, sha, 'pull_request');
 });

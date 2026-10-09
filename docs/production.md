@@ -63,14 +63,18 @@ on cz, separate from the CI key.
 
 Next, `install-access.sh <CI-public-key-file>` installs the restricted account,
 root-owned wrapper and SSH entrypoint. Store the corresponding CI private key
-in the production Environment secret without printing it.
+in the production Environment secret without printing it. The dedicated
+account uses an impossible password hash: password login remains disabled,
+while the account itself can authenticate with its forced-command SSH key.
 
 After DNS exists and the merged main CI is green, run
 `install-edge.sh <reviewed-main-sha>` to install the HTTP challenge vhost,
 publish the static files, obtain the certificate using the existing Certbot
 account, and install TLS. Nginx configuration is tested before each reload.
 Refreshes retain existing TLS while obtaining a certificate and restore the
-previous edge on failure. Then manually dispatch `Wishes Production Deploy`
+previous edge on failure. HTTPS verification briefly retries while new Nginx
+workers start after reload, retaining normal certificate validation. Then
+manually dispatch `Wishes Production Deploy`
 to verify the complete automatic path.
 
 The installer modifies only wishes-specific paths, an isolated account and

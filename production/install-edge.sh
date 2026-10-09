@@ -36,7 +36,11 @@ install -m 0644 "$script_dir/wishes.conf" "$site"
 ln -sfn "$site" "$enabled"
 nginx -t
 systemctl reload nginx
-actual=$(curl --fail --silent --show-error --resolve wishes.ks-design.art:443:127.0.0.1 https://wishes.ks-design.art/__revision)
+# Reload returns before the new workers accept TLS; briefly retry the fully
+# verified HTTPS request while the previous worker generation drains.
+actual=$(curl --retry 5 --retry-all-errors --retry-delay 1 --retry-max-time 20 \
+  --connect-timeout 5 --max-time 5 --fail --silent --show-error \
+  --resolve wishes.ks-design.art:443:127.0.0.1 https://wishes.ks-design.art/__revision)
 [[ $actual == "$1" ]]
 finished=true
 echo 'Installed wishes HTTPS edge.'

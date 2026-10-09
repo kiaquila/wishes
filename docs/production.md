@@ -66,6 +66,11 @@ root-owned wrapper and SSH entrypoint. Store the corresponding CI private key
 in the production Environment secret without printing it. The dedicated
 account uses an impossible password hash: password login remains disabled,
 while the account itself can authenticate with its forced-command SSH key.
+On cz, SSH also has an explicit user allowlist. The installer adds only
+`AllowUsers wishesdeploy` in a separate wishes-owned SSH include. It checks
+SSH syntax and confirms the existing admitted users remain present before
+reloading; failures restore the previous include. An unloaded include or an
+unexpected unrestricted host fails closed.
 
 After DNS exists and the merged main CI is green, run
 `install-edge.sh <reviewed-main-sha>` to install the HTTP challenge vhost,

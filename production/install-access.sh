@@ -30,6 +30,9 @@ install -o root -g root -m 0755 "$script_dir/ssh-command.sh" /usr/local/sbin/wis
 if ! id wishesdeploy >/dev/null 2>&1; then
   useradd --system --home-dir /var/lib/wishesdeploy --shell /bin/bash wishesdeploy
 fi
+# An impossible password hash disables password login without the leading '!'
+# account lock that can also prevent OpenSSH public-key authentication.
+usermod --password '*' wishesdeploy
 install -d -o root -g wishesdeploy -m 0750 /var/lib/wishesdeploy /var/lib/wishesdeploy/.ssh
 printf 'restrict,command="/usr/local/sbin/wishes-production-ssh-command" %s\n' "$public_key" > /var/lib/wishesdeploy/.ssh/authorized_keys
 chown root:wishesdeploy /var/lib/wishesdeploy/.ssh/authorized_keys

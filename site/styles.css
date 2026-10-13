@@ -119,7 +119,7 @@ h2 { margin: 0; font-size: 21px; line-height: 1.2; letter-spacing: -.015em; font
   .wishlist-note { padding-bottom: 24px; }
   .wishlist-note p { font-size: 13px; line-height: 1.55; }
 }
-@media (max-height: 600px) and (min-width: 761px) {
+@media (max-height: 680px) and (min-width: 761px) {
   :root { --card-width: min(74vw,760px); }
   .gallery { padding-block: 12px; }
   .selected-card { padding: 12px 24px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; align-items: center; }

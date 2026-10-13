@@ -13,7 +13,7 @@ function fillCard(card, item) {
   img.src = item.image;
   img.srcset = `/assets/${item.id}-768.webp 768w, ${item.image} ${item.width || 1536}w`;
   img.sizes = card.classList.contains('selected-card')
-    ? '(max-width: 760px) calc(100vw - 84px), (max-height: 600px) and (min-width: 761px) calc((min(74vw, 760px) - 72px) / 2), min(50vw, max(432px, calc((60vh - 176px) * 1.92)))'
+    ? '(max-width: 760px) calc(100vw - 84px), (max-height: 680px) and (min-width: 761px) calc((min(74vw, 760px) - 72px) / 2), min(50vw, max(432px, calc((60vh - 176px) * 1.92)))'
     : '(max-width: 480px) calc(100vw - 68px), (max-width: 760px) 40vw, 26vw';
   img.alt = item.alt;
   img.width = item.width || 1536;

@@ -162,3 +162,10 @@ Chrome QA checked every wish at 1512×770, 1366×768, 1024×600, 844×390,
 390×844, 390×667 and 360×640: all 140 cases showed the complete disclaimer
 within the viewport, with no vertical or horizontal page overflow. The square
 grid retains its scrolling list and footer below the final row.
+
+Codex review identified a missing compact-layout range at 1024×640. Chrome
+confirmed a 658px page in a 640px viewport. The wide short-screen breakpoint
+now includes heights up to 680px, and both initial and dynamic image hints
+use that same threshold. Another 120 slide/viewport cases pass at 1024×601,
+1024×640, 1024×680, 1024×681, 390×761 and 360×761, including both sides of the
+layout breakpoints.

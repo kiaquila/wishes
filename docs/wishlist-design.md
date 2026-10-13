@@ -119,3 +119,46 @@ Final small size adjustment on 2026-10-08: the desktop image frame grows by
 horizontal overflow. Mobile and short-window size overrides are preserved.
 Responsive image hints match the new frame width. Preflight passes against
 the existing delivery baseline.
+
+## Telegram wishlist update — 2026-10-13
+
+The original four wishes remain. Sixteen wishes from the user's Telegram
+wishlist were added with their source photographs; the requested treatment
+and duplicate velvet pouch were skipped. The photo without a caption became
+“Голубые мюли”. Product amounts and the Mesmerize shade are preserved, and the
+mug says “Продаётся в New Garden.” A footer in both layouts carries the user's
+note about choosing ideas according to one's wishes and possibilities.
+
+Imported photographs retain their composition inside the existing frames.
+Local WebP variants use 1536px and 768px widths, with smaller 192px previews.
+Thumbnail quality is reduced to keep the initial delivery within the existing
+baseline tolerance. The baseline and validation policy remain unchanged:
+first paint is 1070ms and full load is 1275ms, compared with 1066ms / 1271ms.
+
+Chrome QA at its normal desktop viewport confirms:
+
+- Both layouts show the expanded list of 20 cards.
+- Selecting the mug through a neighbour preview shows its photograph and
+  New Garden note; navigation wraps from the first wish to the twentieth.
+- The bottom of the grid shows the mug note and complete footer text.
+- Reload preserves square-grid mode; there is no horizontal overflow,
+  missing image in the visible final row, or console error.
+- The local preview remains open in Chrome for the user's review.
+
+`npm run preflight` passes all 32 harness, four site and eight production
+checks, the build, JavaScript/shell syntax checks and delivery comparison.
+
+### Footer fitting in carousel mode
+
+The header, main content and footer share a flex-column page with a minimum
+height of one viewport. The carousel no longer reserves a full viewport before
+the footer. Its card is centred in the remaining space, with previews aligned
+to the image. Short wide screens use an image/text split; short narrow screens
+use tighter spacing and a shorter image frame. The footer and text retain their
+natural height, so extreme zoom or unusually small windows can still scroll
+rather than clipping content. Responsive image hints match the short wide card.
+
+Chrome QA checked every wish at 1512×770, 1366×768, 1024×600, 844×390,
+390×844, 390×667 and 360×640: all 140 cases showed the complete disclaimer
+within the viewport, with no vertical or horizontal page overflow. The square
+grid retains its scrolling list and footer below the final row.

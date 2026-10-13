@@ -30,11 +30,11 @@
       <section class="gallery" aria-label="Желания" aria-roledescription="карусель" tabindex="0">
         <div class="gallery-side gallery-side-left">
           <button class="arrow" type="button" data-direction="-1" aria-label="Предыдущее желание"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></button>
-          <button class="preview" type="button" aria-label="Выбрать: Кимоно с журавлями"><img src="/assets/crane-kimono-192.webp" width="192" height="256" alt=""></button>
-          <button class="preview" type="button" aria-label="Выбрать: Бархатная сумочка-мешочек"><img src="/assets/velvet-pouch-192.webp" width="192" height="240" alt=""></button>
+          <button class="preview" type="button" aria-label="Выбрать: Гель для умывания Janssen Cosmetics"><img src="/assets/janssen-cleanser-192.webp" width="192" height="192" alt=""></button>
+          <button class="preview" type="button" aria-label="Выбрать: Кружка с блюдцем"><img src="/assets/new-garden-mug-192.webp" width="192" height="256" alt=""></button>
         </div>
         <article class="selected-card" aria-label="Варенье из лепестков роз">
-          <img class="selected-image" src="/assets/rose-jam-1536.webp" srcset="/assets/rose-jam-768.webp 768w, /assets/rose-jam-1536.webp 1536w" sizes="(max-width: 760px) calc(100vw - 84px), min(50vw, max(432px, calc((60vh - 176px) * 1.92)))" width="1536" height="1024" alt="Варенье из лепестков роз на керамической тарелке с золотистой ложкой" fetchpriority="high">
+          <img class="selected-image" src="/assets/rose-jam-1536.webp" srcset="/assets/rose-jam-768.webp 768w, /assets/rose-jam-1536.webp 1536w" sizes="(max-width: 760px) calc(100vw - 84px), (max-height: 680px) and (min-width: 761px) calc((min(74vw, 760px) - 72px) / 2), min(50vw, max(432px, calc((60vh - 176px) * 1.92)))" width="1536" height="1024" alt="Варенье из лепестков роз на керамической тарелке с золотистой ложкой" fetchpriority="high">
           <div class="card-copy">
             <h2>Варенье из лепестков роз</h2>
             <p hidden></p>
@@ -42,14 +42,17 @@
           </div>
         </article>
         <div class="gallery-side gallery-side-right">
-          <span class="counter" aria-hidden="true">1/4</span>
+          <span class="counter" aria-hidden="true">1/20</span>
           <button class="preview" type="button" aria-label="Выбрать: Гидрогелевые патчи"><img src="/assets/hydrogel-patches-192.webp" width="192" height="128" alt=""></button>
-          <button class="preview" type="button" hidden></button>
+          <button class="preview" type="button" aria-label="Выбрать: Кимоно с журавлями"><img src="/assets/crane-kimono-192.webp" width="192" height="256" alt=""></button>
           <button class="arrow" type="button" data-direction="1" aria-label="Следующее желание"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7"/></svg></button>
         </div>
       </section>
       <section class="grid" aria-label="Все желания" hidden></section>
       <p class="sr-only" id="announcement" aria-live="polite" aria-atomic="true"></p>
     </main>
+    <footer class="wishlist-note">
+      <p>Здесь вообще все мои великолепные идеи, чтобы не было скучно :) Так что это абсолютно нормально, что не все их можно реализовать. Выбирайте по своему желанию и возможностям :)</p>
+    </footer>
   </body>
 </html>

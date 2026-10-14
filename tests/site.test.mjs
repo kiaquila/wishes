@@ -31,15 +31,21 @@ test('the built wishlist ships all photos, thumbnails, fonts and referenced reso
   assert.doesNotMatch(html, /data-view="landscape"|Selected projects/i);
 });
 
-test('only the kimono links to the requested shop variant, with size M', () => {
+test('shop links preserve the requested products and kimono variant', () => {
   const linked = items.filter(item => item.url);
-  assert.equal(linked.length, 1);
-  assert.equal(linked[0].id, 'crane-kimono');
-  assert.match(linked[0].description, /Размер M/);
-  const url = new URL(linked[0].url);
+  assert.deepEqual(linked.map(item => item.id), ['rose-jam', 'crane-kimono', 'k18-hair-mask']);
+  const kimono = linked.find(item => item.id === 'crane-kimono');
+  assert.match(kimono.description, /Размер M/);
+  const url = new URL(kimono.url);
   assert.equal(url.protocol, 'https:');
   assert.equal(url.hostname, 'www.homeokat.com');
   assert.equal(url.searchParams.get('variant'), 'c552ba2c-10b2-4525-be7e-bbda1d341c6f');
+  for (const [id, product] of [['rose-jam', 'MLAU5270707444'], ['k18-hair-mask', 'MLAU4002316294']]) {
+    const shop = new URL(linked.find(item => item.id === id).url);
+    assert.equal(shop.protocol, 'https:');
+    assert.equal(shop.hostname, 'www.mercadolibre.com.ar');
+    assert.ok(shop.pathname.endsWith(`/up/${product}`));
+  }
 });
 
 // Model request state separately from attributes: updating src/srcset on a

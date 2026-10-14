@@ -169,3 +169,38 @@ now includes heights up to 680px, and both initial and dynamic image hints
 use that same threshold. Another 120 slide/viewport cases pass at 1024×601,
 1024×640, 1024×680, 1024×681, 390×761 and 360×761, including both sides of the
 layout breakpoints.
+
+## Wishlist copy revision — 2026-10-14
+
+The visible WISHLIST label is removed; the page retains a Russian heading for
+screen readers. The header uses two columns for the brand and view controls.
+The footer now reads: “Здесь вообще все мои безумные идеи :) Но можно выбрать
+что-то на подарок :)”.
+
+The Torres excursion is the heading and San Valentine tasting the description.
+MANYO and its responsive assets are removed. The concert, slippers (size 39),
+Montenegro, patches, caviar and India copy follow the user's corrections. K18's
+amount and authenticity are part of its bold heading. Rose jam and K18 link to
+the supplied Mercado Libre products. Italy replaces MANYO in the total of 20
+wishes, using the user's Venice attachment, resized and encoded as local WebP.
+
+The built-in imagegen tool removed the Taj Mahal photo's black top border;
+its output is encoded in the existing `taj-mahal-{1536,768,192}.webp` assets.
+The final prompt was:
+
+> Remove only the thin black horizontal strip at the very top by cropping away
+> the top strip. Preserve the exact original photograph, Taj Mahal architecture,
+> sunset color, crescent moon, lights, reflections, composition and all remaining
+> pixels as closely as possible. Do not retouch, recreate, add detail or change
+> anything else. Output the same portrait photograph with no black top border.
+
+Chrome QA confirms the desktop carousel and three-column grid, the one-column
+390px grid, all 20 titles/descriptions and the three shop links. K18's complete
+heading has weight 800. All 60 carousel cases at 390×844, 360×640 and 844×390
+fit the card and footer without horizontal or vertical overflow. Italy and K18
+were inspected in the grid, and Italy in the carousel. No console warnings or
+errors were captured. The viewport override was reset.
+
+Preflight passes 32 harness, six site and eight production tests, build and
+syntax checks. Delivery is 1071ms first paint and 1277ms full load, within the
+unchanged 1066ms / 1271ms baseline tolerance.

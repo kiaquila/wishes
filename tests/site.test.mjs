@@ -41,3 +41,103 @@ test('only the kimono links to the requested shop variant, with size M', () => {
   assert.equal(url.hostname, 'www.homeokat.com');
   assert.equal(url.searchParams.get('variant'), 'c552ba2c-10b2-4525-be7e-bbda1d341c6f');
 });
+
+// Model request state separately from attributes: updating src/srcset on a
+// mounted image does not discard the bitmap the browser already decoded.
+async function carouselFixture() {
+  const { runInNewContext } = await import('node:vm');
+  class Element {
+    constructor(className = '') {
+      this.className = className;
+      this.classList = { contains: name => this.className.split(' ').includes(name) };
+      this.style = {};
+      this.dataset = {};
+      this.attributes = {};
+      this.children = new Map();
+      this.listeners = {};
+      this.paintedImage = null;
+    }
+    querySelector(selector) {
+      if (!this.children.has(selector)) {
+        const child = new Element(selector === 'img' ? 'selected-image' : '');
+        child.parent = this;
+        this.children.set(selector, child);
+      }
+      return this.children.get(selector);
+    }
+    setAttribute(name, value) { this.attributes[name] = value; }
+    removeAttribute(name) { delete this.attributes[name]; }
+    addEventListener(name, callback) { this.listeners[name] = callback; }
+    append() {}
+    replaceChildren() {}
+    cloneNode() {
+      const clone = new Element(this.className);
+      for (const name of ['src', 'srcset', 'sizes', 'alt', 'width', 'height', 'fetchPriority']) clone[name] = this[name];
+      clone.style = { ...this.style };
+      return clone;
+    }
+    replaceWith(next) {
+      next.parent = this.parent;
+      this.parent.children.set('img', next);
+      this.parent = null;
+    }
+  }
+  const elements = new Map(['main', '.gallery', '.grid', '.selected-card', '#announcement', '.counter'].map(name => [name, new Element(name.slice(1))]));
+  const selected = elements.get('.selected-card');
+  selected.querySelector('img').fetchPriority = 'high';
+  const directions = [-1, 1].map(direction => {
+    const button = new Element();
+    button.dataset.direction = String(direction);
+    return button;
+  });
+  const previews = Array.from({ length: 4 }, () => new Element());
+  const document = {
+    querySelector: name => elements.get(name),
+    querySelectorAll: name => name === '[data-direction]' ? directions : name === '.preview' ? previews : [],
+    createElement: () => new Element(),
+  };
+  const source = await readFile(new URL('../site/app.js', import.meta.url), 'utf8');
+  runInNewContext(source.replace(/^import .*;\n/, ''), {
+    document, items, normalizeView, wrapIndex,
+    localStorage: { getItem: () => null, setItem() {} },
+  });
+  return { selected, elements, previews, previous: () => directions[0].listeners.click(), next: () => directions[1].listeners.click() };
+}
+
+test('navigation discards the previous bitmap while the new image is pending', async () => {
+  const { selected, elements, next, previous } = await carouselFixture();
+  const first = selected.querySelector('img');
+  first.paintedImage = items[0].image;
+  next();
+  const second = selected.querySelector('img');
+  assert.notEqual(second, first);
+  assert.equal(first.parent, null);
+  assert.equal(second.paintedImage, null, 'the next title must never accompany the previous decoded bitmap');
+  assert.equal(second.src, items[1].image);
+  assert.match(second.srcset, /hydrogel-patches-768.webp/);
+  assert.equal(second.fetchPriority, 'high');
+  assert.equal(second.className, 'selected-image');
+  assert.equal(selected.querySelector('h2').textContent, items[1].title);
+  assert.equal(elements.get('.counter').textContent, '2/20');
+  next();
+  const third = selected.querySelector('img');
+  previous();
+  const latest = selected.querySelector('img');
+  third.paintedImage = items[2].image; // An older request finishes out of order.
+  assert.equal(third.parent, null);
+  assert.equal(latest.paintedImage, null);
+  assert.equal(latest.src, items[1].image);
+  assert.equal(selected.querySelector('h2').textContent, items[1].title);
+});
+
+test('wraparound, preview and keyboard navigation keep the selected content together', async () => {
+  const { selected, elements, previews, previous } = await carouselFixture();
+  previous();
+  assert.equal(selected.querySelector('img').src, items.at(-1).image);
+  assert.equal(elements.get('.counter').textContent, '20/20');
+  previews[2].onclick();
+  assert.equal(selected.querySelector('img').src, items[0].image);
+  elements.get('.gallery').listeners.keydown({ key: 'ArrowRight', preventDefault() {} });
+  assert.equal(selected.querySelector('img').src, items[1].image);
+  assert.equal(selected.querySelector('h2').textContent, items[1].title);
+});

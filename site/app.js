@@ -9,7 +9,11 @@ const viewButtons = [...document.querySelectorAll('[data-view]')];
 let index = 0;
 
 function fillCard(card, item) {
-  const img = card.querySelector('img');
+  const previousImage = card.querySelector('img');
+  // A reused <img> can keep painting its previous bitmap while the next
+  // request is pending. Give each selected wish its own image request state.
+  const isSelected = card.classList.contains('selected-card');
+  const img = isSelected ? previousImage.cloneNode(false) : previousImage;
   img.src = item.image;
   img.srcset = `/assets/${item.id}-768.webp 768w, ${item.image} ${item.width || 1536}w`;
   img.sizes = card.classList.contains('selected-card')
@@ -20,6 +24,7 @@ function fillCard(card, item) {
   img.height = item.height || 1024;
   img.style.objectFit = item.fit || 'cover';
   img.style.backgroundColor = item.background || 'transparent';
+  if (isSelected) previousImage.replaceWith(img);
   card.querySelector('h2').textContent = item.title;
   const description = card.querySelector('p');
   description.textContent = item.description;

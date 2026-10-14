@@ -218,6 +218,9 @@ The delivered assets are `site/assets/kaws-universe-set-1536.webp` (1536×1024),
 `site/assets/kaws-universe-set-768.webp` (768×512), and
 `site/assets/kaws-universe-set-192.webp` (192×128). The card uses `contain`
 against the existing `#f2f2f3` background so all three charms remain visible.
+WebP exports clear RGB data in fully transparent pixels and preserve it with
+the encoder's `exact` option. This prevents hidden colour bands when a viewer
+ignores alpha; the 1536px export's alpha mask matches the imagegen PNG exactly.
 
 Exact image-edit prompt:
 

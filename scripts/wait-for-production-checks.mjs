@@ -208,12 +208,17 @@ export async function assertProjectCIProvenance(api, sha, event = 'main', trigge
   }
   await assertWorkflowIdentity(api, run, 'ci.yml');
   const jobs = await api.request(`${base}/actions/runs/${run.id}/jobs?per_page=100`);
-  const checks = await checkRuns(api, sha);
   for (const name of PUSH_CHECKS) {
     const job = jobs.jobs?.find(item => item.name === name);
-    const check = checks.find(item => job?.check_run_url === `https://api.github.com${base}/check-runs/${item.id}`);
+    const prefix = `https://api.github.com${base}/check-runs/`;
+    const checkId = job?.check_run_url?.startsWith(prefix) ? job.check_run_url.slice(prefix.length) : '';
     if (!job || job.conclusion !== 'success' || job.status !== 'completed' ||
-        check?.name !== name || check.head_sha !== sha || check.app?.slug !== 'github-actions' ||
+        !/^\d+$/.test(checkId)) {
+      throw new Error(`${name} does not belong to the exact successful canonical CI run.`);
+    }
+    const check = await api.request(`${base}/check-runs/${checkId}`);
+    if (String(check?.id) !== checkId || check.name !== name ||
+        check.head_sha !== sha || check.app?.slug !== 'github-actions' ||
         check.status !== 'completed' || check.conclusion !== 'success') {
       throw new Error(`${name} does not belong to the exact successful canonical CI run.`);
     }
@@ -269,7 +274,8 @@ async function main() {
   }
 
   const api = new GitHubApi(repository, process.env.GITHUB_TOKEN);
-  await waitForRequiredChecks({ api, sha: targetSha, requiredNames: PUSH_CHECKS });
+  // A workflow_run candidate is already complete. Authenticate its own jobs
+  // and checks directly; another run on the same SHA must not replace them.
   await assertProjectCIProvenance(api, targetSha, 'main', process.env.TRIGGERING_CI_RUN_ID || '');
 
   const pullRequests = await api.request(

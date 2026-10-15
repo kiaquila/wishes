@@ -115,10 +115,13 @@ test('a duplicate Project CI workflow and unrelated same-named checks cannot rel
   const jobs = checks.map(check => ({ name: check.name, status: 'completed', conclusion: 'success',
     check_run_url: `https://api.github.com/repos/kiaquila/wishes/check-runs/${check.id}` }));
   const runs = [run];
+  const allChecks = [...checks];
   const api = { repository: 'kiaquila/wishes', request: async path =>
     path.endsWith('/workflows/ci.yml') ? { id: 10, path: '.github/workflows/ci.yml' } :
       path.includes('/workflows/ci.yml/runs?') ? { workflow_runs: runs } :
-      path.includes('/jobs?') ? { jobs } : { check_runs: checks } };
+      path.includes('/jobs?') ? { jobs } :
+        path.includes('/check-runs/') ? allChecks.find(check => path.endsWith(`/check-runs/${check.id}`)) :
+          { check_runs: allChecks } };
   await assert.rejects(assertProjectCIProvenance(api, sha, 'push', '99'), /canonical Project CI/);
   run.conclusion = 'failure';
   await assert.rejects(assertProjectCIProvenance(api, sha, 'push', '42'), /canonical Project CI/);
@@ -138,15 +141,19 @@ test('a duplicate Project CI workflow and unrelated same-named checks cannot rel
   await assertProjectCIProvenance(api, sha, 'main', '42');
   const overlappingRun = { ...run, id: 43, status: 'queued', conclusion: null };
   runs.push(overlappingRun);
+  const overlappingChecks = checks.map(check => ({ ...check, id: check.id + 10, status: 'queued', conclusion: null }));
+  allChecks.push(...overlappingChecks);
   await assertProjectCIProvenance(api, sha, 'main', '42');
   await assert.rejects(assertProjectCIProvenance(api, sha), /canonical Project CI/);
   overlappingRun.status = 'completed';
   for (const conclusion of ['cancelled', 'failure']) {
     overlappingRun.conclusion = conclusion;
+    for (const check of overlappingChecks) Object.assign(check, { status: 'completed', conclusion });
     await assertProjectCIProvenance(api, sha, 'main', '42');
     await assert.rejects(assertProjectCIProvenance(api, sha), /canonical Project CI/);
   }
   runs.pop();
+  allChecks.splice(checks.length);
   run.head_branch = 'feature';
   await assert.rejects(assertProjectCIProvenance(api, sha), /canonical Project CI/);
   run.head_branch = 'main';

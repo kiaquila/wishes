@@ -17,7 +17,9 @@ const MAX_ACTIVE_RUN_POLLS = 24;
 export function shouldRouteCodexReviewRerunEvent(event) {
   if (event?.review) return isTrustedCodexLogin(event.review.user?.login);
   if (!event?.issue?.pull_request || !event?.comment) return false;
-  return /^Codex Review:/i.test(String(event.comment.body || "")) &&
+  // New no-findings receipts prepend a versioned HTML marker. Keep this body
+  // policy here so the workflow's author filter cannot reject valid receipts.
+  return /^(?:<!-- codex-review-receipt:v1 -->\s*)?Codex Review:/i.test(String(event.comment.body || "")) &&
     isTrustedCodexLogin(event.comment.user?.login);
 }
 

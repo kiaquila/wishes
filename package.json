@@ -8,6 +8,7 @@
     "dev": "npm run build && node scripts/serve-site.mjs",
     "preview": "node scripts/serve-site.mjs",
     "test:site": "node --test tests/site.test.mjs",
+    "test:browser": "node --test tests/carousel.browser.test.mjs",
     "test:production": "node --test tests/production.test.mjs",
     "check:repository": "node scripts/check-repository.mjs",
     "check:project": "node scripts/run-project-checks.mjs",
@@ -18,5 +19,8 @@
   },
   "engines": {
     "node": ">=22.18.0"
+  },
+  "devDependencies": {
+    "playwright": "1.64.1"
   }
 }

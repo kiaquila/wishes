@@ -21,4 +21,4 @@ const server = createServer(async (request, response) => {
     response.end(request.method === 'HEAD' ? undefined : content);
   } catch { response.writeHead(404).end('Not found'); }
 });
-server.listen(port, '127.0.0.1', () => console.log(`Wishlist: http://127.0.0.1:${port}`));
+server.listen(port, '127.0.0.1', () => console.log(`Wishlist: http://127.0.0.1:${server.address().port}`));

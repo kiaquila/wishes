@@ -15,6 +15,13 @@ are ignored; durable development decisions may be committed as focused docs.
 
 `npm run preflight` runs repository policy, harness regression tests, and the
 configured project commands. Command arrays execute directly without a shell.
+Application checks include Chromium regressions through the same `node:test`
+runner. After `npm ci --ignore-scripts`, install the headless browser once with
+`npx --no-install playwright install --with-deps --only-shell chromium` (CI does
+this explicitly). `npm run build && npm run test:browser` runs only this suite.
+The locked, Apache-2.0 Playwright packages are development dependencies; neither
+the library nor the browser is shipped in the static site. Tests use loopback
+requests only and require no external service, credentials or persistent profile.
 The repository guard checks required infrastructure, secret patterns, personal
 paths, generated directories, symbolic links, workflow permissions, and action
 SHA pins. CI also scans dependencies with OSV and fails on vulnerabilities.

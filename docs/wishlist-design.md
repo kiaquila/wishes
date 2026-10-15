@@ -273,3 +273,42 @@ Chrome QA on 2026-10-15:
   Preflight also passes 32 harness and eight production tests plus syntax,
   build, repository and delivery checks. Delivery is 1112ms first paint and
   1321ms full load against the unchanged 1066ms / 1271ms baseline.
+
+## Carousel browser regressions — 2026-10-15
+
+The Node test runner now also drives a real Chromium headless browser through
+the locked Playwright library. No second test runner, application framework,
+external test service or production dependency is introduced. CI installs only
+the headless Chromium shell and runs the suite as part of preflight.
+
+Nine browser tests cover a cold first visit with 100ms resource latency and
+indefinitely held full photos; both orders of late adjacent photo responses;
+two fast laps through all wishes followed by reversal and keyboard navigation;
+and all 21 wishes at 1512×770, 390×844, 360×640, 844×390 and 1024×640.
+Network routing disables the HTTP cache and each case uses fresh storage.
+Assertions check a loaded image belonging to the selected wish together with
+its title, description, alt text, counter and shop link. The 105 slide/viewport
+cases check both preview and full-photo states: the card, image, arrows and
+complete disclaimer fit inside the screen, do not overlap or scroll, and do
+not shift when the photo decodes. Fonts finish loading before comparing geometry.
+
+The cold-load test exposed a real remaining bug in `48d3fe6`: the initial HTML
+image requested only the full photo and the first selection reused it, so its
+frame stayed blank until that response arrived. The test failed while the full
+response was held. The HTML now starts with the same small preview used for
+later wishes; the full photo loads separately and replaces it after decoding.
+The unchanged test passes. Existing failure/retry checks also pass.
+
+As a separate sensitivity check, temporarily removing the stale-selection guard
+made both out-of-order browser tests fail. Restoring the guard made both pass.
+These probes used real network responses and native image decoding; the
+deliberately broken code is not committed. Screenshots were visually inspected
+at 1512×770, 390×844 and 360×640 using the long KAWS card and its shop link;
+the full disclaimer remained visible and page dimensions matched the viewport.
+
+Preflight passes 32 harness, nine site, nine browser and eight production tests,
+plus build, syntax and delivery checks. The deterministic delivery model reports
+942ms first paint and 1151ms full load against the unchanged 1066ms / 1271ms
+baseline. It now counts the initial small preview in HTML; it does not measure
+the subsequent JavaScript-requested full photo, which the browser suite checks
+separately. No baseline or tolerance was changed.

@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { runInNewContext } from "node:vm";
 
 const repositoryRoot = resolve(
   process.env.WEB_DESIGN_REPOSITORY_ROOT || resolve(import.meta.dirname, "..")
@@ -311,6 +313,59 @@ test("rerun routing accepts only exact trusted Codex evidence", () => {
     shouldRouteCodexReviewRerunEvent({ review: { user: { login: "fake-codex[bot]" } } }),
     false
   );
+});
+
+// The bot's no-findings receipt now starts with this marker (observed in #13).
+const receiptBody = `<!-- codex-review-receipt:v1 -->\n\nCodex Review: Didn't find any major issues.\n\n**Reviewed commit:** \`${headSha.slice(0, 10)}\``;
+
+test("receipt-prefixed bot comments route on creation and edit without trusting other authors", () => {
+  for (const action of ["created", "edited"]) {
+    const event = { action, issue: { pull_request: {} }, comment: { body: receiptBody, user: codexUser } };
+    assert.equal(shouldRouteCodexReviewRerunEvent(event), true, action);
+    for (const login of ["repo-owner", "fake-codex[bot]", "chatgpt-codex-connector"]) {
+      assert.equal(shouldRouteCodexReviewRerunEvent({ ...event, comment: { ...event.comment, user: { login } } }), false);
+    }
+    assert.equal(shouldRouteCodexReviewRerunEvent({ ...event, issue: {} }), false, "ordinary issues cannot rerun PR checks");
+    for (const body of [
+      "<!-- codex-review-receipt:v1 -->\nUnrelated bot message",
+      `Quoted receipt:\n${receiptBody}`,
+      "<!-- codex-pull-request-review-summary -->\nReview is running",
+      "Unrelated bot message",
+    ]) {
+      assert.equal(shouldRouteCodexReviewRerunEvent({ ...event, comment: { ...event.comment, body } }), false);
+    }
+  }
+});
+
+test("the real workflow admits receipt-prefixed events to its trusted default-branch policy", () => {
+  const workflow = readFileSync(resolve(repositoryRoot, ".github/workflows/codex-review-rerun.yml"), "utf8");
+  const condition = workflow.match(/    if: \|\n([\s\S]*?)    runs-on:/)?.[1];
+  assert.ok(condition, "rerun job must have an explicit event/author condition");
+  // Evaluate the actual job predicate, whose operators are also valid JS.
+  // startsWith models the Actions expression function used by the old filter.
+  const accepts = (event, eventName = "issue_comment") => Boolean(runInNewContext(condition, {
+    github: { event_name: eventName, event },
+    startsWith: (value, prefix) => String(value || "").toLowerCase().startsWith(prefix.toLowerCase()),
+  }));
+  for (const action of ["created", "edited"]) {
+    const event = { action, issue: { pull_request: {} }, comment: { body: receiptBody, user: codexUser } };
+    assert.equal(accepts(event), true, `${action} receipt must reach the rerun script`);
+    assert.equal(accepts({ ...event, comment: { ...event.comment, user: { login: "fake-codex[bot]" } } }), false);
+    assert.equal(accepts({ ...event, issue: {} }), false);
+    assert.equal(accepts(event, "unrelated_event"), false);
+  }
+  assert.equal(accepts({ review: { user: codexUser } }, "pull_request_review"), true);
+  assert.equal(accepts({ review: { user: { login: "fake-codex[bot]" } } }, "pull_request_review"), false);
+  assert.match(workflow, /ref: \$\{\{ github\.event\.repository\.default_branch \}\}/);
+});
+
+test("receipt-prefixed evidence still requires the reviewed head and a subsequent trusted response", () => {
+  const receipt = { id: "31", body: receiptBody, user: codexUser, created_at: "2026-08-05T12:01:00Z" };
+  assert.equal(isAcceptableCodexSummaryComment(receipt, headSha, "2026-08-05T12:00:00Z", "30"), true);
+  assert.equal(isAcceptableCodexSummaryComment(receipt, "0".repeat(40), "2026-08-05T12:00:00Z", "30"), false);
+  assert.equal(isAcceptableCodexSummaryComment(receipt, headSha, "2026-08-05T12:02:00Z", "32"), false);
+  assert.equal(isAcceptableCodexSummaryComment({ ...receipt, user: { login: "repo-owner" } }, headSha), false);
+  assert.equal(isAcceptableCodexSummaryComment({ ...receipt, body: receiptBody.replace(/\*\*Reviewed commit:\*\*.*/, "") }, headSha), false);
 });
 
 test("rerun selection is head-bound and waits for active runs before rerunning", () => {

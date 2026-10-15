@@ -114,9 +114,10 @@ test('a duplicate Project CI workflow and unrelated same-named checks cannot rel
     head_sha: sha, app: { slug: 'github-actions' } }));
   const jobs = checks.map(check => ({ name: check.name, status: 'completed', conclusion: 'success',
     check_run_url: `https://api.github.com/repos/kiaquila/wishes/check-runs/${check.id}` }));
+  const runs = [run];
   const api = { repository: 'kiaquila/wishes', request: async path =>
     path.endsWith('/workflows/ci.yml') ? { id: 10, path: '.github/workflows/ci.yml' } :
-      path.includes('/workflows/ci.yml/runs?') ? { workflow_runs: [run] } :
+      path.includes('/workflows/ci.yml/runs?') ? { workflow_runs: runs } :
       path.includes('/jobs?') ? { jobs } : { check_runs: checks } };
   await assert.rejects(assertProjectCIProvenance(api, sha, 'push', '99'), /canonical Project CI/);
   run.conclusion = 'failure';
@@ -135,6 +136,17 @@ test('a duplicate Project CI workflow and unrelated same-named checks cannot rel
   // A missing push event can be recovered by running the same CI on main.
   run.event = 'workflow_dispatch';
   await assertProjectCIProvenance(api, sha, 'main', '42');
+  const overlappingRun = { ...run, id: 43, status: 'queued', conclusion: null };
+  runs.push(overlappingRun);
+  await assertProjectCIProvenance(api, sha, 'main', '42');
+  await assert.rejects(assertProjectCIProvenance(api, sha), /canonical Project CI/);
+  overlappingRun.status = 'completed';
+  for (const conclusion of ['cancelled', 'failure']) {
+    overlappingRun.conclusion = conclusion;
+    await assertProjectCIProvenance(api, sha, 'main', '42');
+    await assert.rejects(assertProjectCIProvenance(api, sha), /canonical Project CI/);
+  }
+  runs.pop();
   run.head_branch = 'feature';
   await assert.rejects(assertProjectCIProvenance(api, sha), /canonical Project CI/);
   run.head_branch = 'main';

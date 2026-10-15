@@ -199,11 +199,11 @@ export async function assertProjectCIProvenance(api, sha, event = 'main', trigge
   const eventFilter = event === 'main' ? '' : `&event=${event}`;
   const response = await api.request(`${base}/actions/workflows/ci.yml/runs?head_sha=${sha}${eventFilter}&per_page=100`);
   const run = response.workflow_runs?.filter(item => item.head_sha === sha && events.includes(item.event) &&
-    (item.event === 'pull_request' || item.head_branch === 'main'))
+    (item.event === 'pull_request' || item.head_branch === 'main') &&
+    (!triggeringRunId || String(item.id) === String(triggeringRunId)))
     .sort((left, right) => Number(right.id) - Number(left.id))[0];
   if (!run || run.repository?.full_name !== api.repository ||
-      run.status !== 'completed' || run.conclusion !== 'success' ||
-      (triggeringRunId && String(run.id) !== String(triggeringRunId))) {
+      run.status !== 'completed' || run.conclusion !== 'success') {
     throw new Error('Production requires the exact successful canonical Project CI run.');
   }
   await assertWorkflowIdentity(api, run, 'ci.yml');

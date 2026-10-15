@@ -1,9 +1,10 @@
 # AGENTS.md — wishes
 
 Read `README.md` and `docs/agent-development.md` before changing the repository.
-This repository currently contains development infrastructure only. Do not
-infer a product, framework, design system, deployment target, or roadmap from
-the source repository that supplied the harness.
+Use `README.md` for the current application and deployment details, and
+`agent-development.config.json` for the active development phase and checks.
+Do not infer product requirements or a roadmap from the repository that
+supplied the development harness.
 
 ## Agent collaboration
 
@@ -39,16 +40,12 @@ the source repository that supplied the harness.
 
 ## Validation
 
-Run `npm run preflight` before submitting changes. The bootstrap phase checks
-the repository policy and the harness itself; it is not evidence that an
-application builds or works.
-
-When application development starts, set `phase` to `implementation` in
-`agent-development.config.json`, configure real build/test commands in
-`projectChecks`, and configure performance validation for the built output.
-Add `npm run check:delivery` to preflight when a web build exists. Do not keep
-bootstrap mode to bypass application checks. Explain any measured baseline
-change in the PR and record appropriate visual/interaction QA for UI changes.
+Run `npm run preflight` before submitting changes. Keep the implementation
+phase, real build/test commands in `projectChecks`, built-output performance
+validation, and `npm run check:delivery` aligned with the application. Do not
+switch to bootstrap mode or remove checks to bypass application validation.
+Explain measured baseline changes in the PR and record appropriate
+visual/interaction QA for UI changes.
 
 ## GitHub and pull requests
 

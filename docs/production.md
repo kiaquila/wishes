@@ -18,13 +18,16 @@ Cloudflare API token. All fonts and images are served locally.
 
 ## Automatic deployment
 
-`.github/workflows/production-deploy.yml` runs after the successful main-push
-Project CI workflow, or by manual dispatch for recovery. Before production
+`.github/workflows/production-deploy.yml` runs after the successful Project CI
+workflow on main, triggered by either a push or manual dispatch. The deployment
+workflow can also be manually dispatched. Before production
 credentials are released, the gate requires:
 
 - Successful `validate` and `osv-scan` on the production SHA.
 - Both CI checks belong to the exact successful canonical `ci.yml` run;
-  automatic deployment also verifies that this is the triggering run.
+  automatic deployment also verifies the triggering run ID and attempt.
+  Jobs and checks are fetched from that exact attempt, so a concurrent run or
+  rerun cannot replace its evidence.
 - An exact matching merged PR into main.
 - Successful `validate`, `osv-scan` and `Codex Review` on that PR's reviewed head.
 - The AI check belongs to the trusted Codex workflow, with a matching trusted
@@ -94,5 +97,9 @@ file, not just a successful HTTP response. Chrome verifies both display modes
 and the shop link on the public HTTPS URL.
 
 For a failed deploy, fix the named prerequisite and rerun the workflow.
+If GitHub did not create the main-push CI run after a merge, run
+`gh workflow run ci.yml --ref main`. The successful manual CI run triggers
+deployment automatically, with the same exact-revision, canonical-workflow,
+merged-PR and AI-review checks. A manual CI run on another branch cannot deploy.
 For a product rollback, revert the change in a reviewed PR and merge it through
 the same checks; direct main pushes and old workflow revisions are rejected.

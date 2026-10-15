@@ -6,6 +6,7 @@
     { "name": "Build wishlist", "command": ["npm", "run", "build"] },
     { "name": "Check browser JavaScript", "command": ["node", "--check", "site/app.js"] },
     { "name": "Test wishlist", "command": ["npm", "run", "test:site"] },
+    { "name": "Test carousel in Chromium", "command": ["npm", "run", "test:browser"] },
     { "name": "Test production guards", "command": ["npm", "run", "test:production"] },
     { "name": "Check CI deploy script", "command": ["bash", "-n", "production/deploy.sh"] },
     { "name": "Check server deploy script", "command": ["bash", "-n", "production/server-deploy.sh"] },

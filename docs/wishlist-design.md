@@ -274,6 +274,45 @@ Chrome QA on 2026-10-15:
   build, repository and delivery checks. Delivery is 1112ms first paint and
   1321ms full load against the unchanged 1066ms / 1271ms baseline.
 
+## Carousel browser regressions — 2026-10-15
+
+The Node test runner now also drives a real Chromium headless browser through
+the locked Playwright library. No second test runner, application framework,
+external test service or production dependency is introduced. CI installs only
+the headless Chromium shell and runs the suite as part of preflight.
+
+Nine browser tests cover a cold first visit with 100ms resource latency and
+indefinitely held full photos; both orders of late adjacent photo responses;
+two fast laps through all wishes followed by reversal and keyboard navigation;
+and all 21 wishes at 1512×770, 390×844, 360×640, 844×390 and 1024×640.
+Network routing disables the HTTP cache and each case uses fresh storage.
+Assertions check a loaded image belonging to the selected wish together with
+its title, description, alt text, counter and shop link. The 105 slide/viewport
+cases check both preview and full-photo states: the card, image, arrows and
+complete disclaimer fit inside the screen, do not overlap or scroll, and do
+not shift when the photo decodes. Fonts finish loading before comparing geometry.
+
+The cold-load test exposed a real remaining bug in `48d3fe6`: the initial HTML
+image requested only the full photo and the first selection reused it, so its
+frame stayed blank until that response arrived. The test failed while the full
+response was held. The HTML now starts with the same small preview used for
+later wishes; the full photo loads separately and replaces it after decoding.
+The unchanged test passes. Existing failure/retry checks also pass.
+
+As a separate sensitivity check, temporarily removing the stale-selection guard
+made both out-of-order browser tests fail. Restoring the guard made both pass.
+These probes used real network responses and native image decoding; the
+deliberately broken code is not committed. Screenshots were visually inspected
+at 1512×770, 390×844 and 360×640 using the long KAWS card and its shop link;
+the full disclaimer remained visible and page dimensions matched the viewport.
+
+Preflight passes 32 harness, nine site, nine browser and eight production tests,
+plus build, syntax and delivery checks. The deterministic delivery model reports
+942ms first paint and 1151ms full load against the unchanged 1066ms / 1271ms
+baseline. It now counts the initial small preview in HTML; it does not measure
+the subsequent JavaScript-requested full photo, which the browser suite checks
+separately. No baseline or tolerance was changed.
+
 ## Uniform photos, hooded cape and Davines — 2026-10-15
 
 The wishlist now has 23 items. The attached beaded garment is described as
@@ -298,8 +337,15 @@ one-column grid use the same 3:2 frames. Full-grid and individual cape/Davines
 screenshots were inspected; no console warnings or errors were captured.
 The temporary viewport override was reset.
 
-`npm run preflight` passes 32 harness, ten site and eight production tests,
-the build and syntax checks. The new image test reads all 69 WebP headers to
-verify actual aspect ratios, responsive sizes and intrinsic metadata. Delivery
-measures 1035ms first paint and 1244ms full load against the unchanged
-1066ms / 1271ms baseline.
+Integration with the newer main retains its cold-load preview fix and all nine
+Chromium regressions. They now cover 23 wishes at five viewport sizes in both
+preview and decoded states (230 layout checks), plus slow loads, late responses
+and rapid navigation. No browser test or guardrail was weakened.
+
+`npm run preflight` passes 32 harness, ten site, nine browser and eight
+production tests, the build and syntax checks. The new image test reads all 69
+WebP headers to verify actual aspect ratios, responsive sizes and intrinsic
+metadata. Delivery measures 865ms first paint and 1074ms full load against the
+unchanged 1066ms / 1271ms baseline. As in main's browser-test change, this model
+counts the initial HTML preview; the browser suite verifies the subsequent
+JavaScript-requested full photo separately.

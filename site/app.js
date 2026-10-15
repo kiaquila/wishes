@@ -48,10 +48,10 @@ function loadImage(item, priority = 'low', img = document.createElement('img')) 
 function showSelectedImage(item) {
   const currentSelection = ++selection;
   const previousImage = selected.querySelector('img');
-  // Reuse the initial HTML image and its request. Later selections immediately
-  // show their own tiny preview until the responsive photo is decoded.
-  const entry = loadImage(item, 'high', currentSelection === 1 ? previousImage : undefined);
-  const preview = document.createElement('img');
+  // The initial HTML image is also a tiny preview, so a cold first visit does
+  // not leave an empty frame while the responsive photo loads and decodes.
+  const entry = loadImage(item, 'high');
+  const preview = currentSelection === 1 ? previousImage : document.createElement('img');
   describeImage(preview, item);
   preview.className = 'selected-image';
   preview.src = `/assets/${item.id}-192.webp`;
@@ -68,7 +68,8 @@ function showSelectedImage(item) {
   entry.ready.then(loaded => {
     if (selection !== currentSelection) return;
     const displayed = selected.querySelector('img');
-    if (displayed !== entry.img || !loaded) displayed.replaceWith(loaded ? entry.img : preview);
+    const nextImage = loaded ? entry.img : preview;
+    if (displayed !== nextImage) displayed.replaceWith(nextImage);
     if (!loaded || gallery.hidden) return;
     // Warm only the adjacent slides, after the selected photo has loaded.
     for (const offset of [-1, 1]) loadImage(items[wrapIndex(index + offset, items.length)]);

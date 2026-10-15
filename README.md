@@ -29,8 +29,14 @@ CODEOWNERS, a PR template, and Dependabot version updates.
 
 ```bash
 npm ci --ignore-scripts
+npx --no-install playwright install --with-deps --only-shell chromium
 npm run preflight
 ```
+
+The browser regressions use the existing Node test runner with Playwright's
+Chromium library. After building, run them separately with `npm run test:browser`.
+They control real photo responses, start with fresh browser storage/cache, and
+check the carousel and disclaimer at desktop, mobile and short-screen sizes.
 
 See `AGENTS.md`, `docs/agent-development.md`, and `docs/security.md` for the
 development workflow. Implementation mode builds and checks the wishlist,

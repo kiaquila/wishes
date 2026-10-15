@@ -190,24 +190,46 @@ export async function assertCodexCheckProvenance(api, sha) {
   }
 }
 
-export async function assertProjectCIProvenance(api, sha, event, triggeringRunId = '') {
+export async function assertProjectCIProvenance(api, sha, event = 'main', triggeringRunId = '', triggeringAttempt = '') {
+  const events = event === 'main' ? ['push', 'workflow_dispatch'] : [event];
+  if (events.some(value => !['push', 'workflow_dispatch', 'pull_request'].includes(value))) {
+    throw new Error('Untrusted Project CI event.');
+  }
+  if ((triggeringRunId || triggeringAttempt) &&
+      (!/^[1-9]\d*$/.test(String(triggeringRunId)) || !/^[1-9]\d*$/.test(String(triggeringAttempt)))) {
+    throw new Error('The triggering CI run ID and attempt must both be positive integers.');
+  }
   const base = `/repos/${api.repository}`;
-  const response = await api.request(`${base}/actions/workflows/ci.yml/runs?head_sha=${sha}&event=${event}&per_page=100`);
-  const run = response.workflow_runs?.filter(item => item.head_sha === sha && item.event === event)
-    .sort((left, right) => Number(right.id) - Number(left.id))[0];
-  if (!run || run.repository?.full_name !== api.repository ||
-      run.status !== 'completed' || run.conclusion !== 'success' ||
-      (triggeringRunId && String(run.id) !== String(triggeringRunId))) {
+  const eligible = item => item?.head_sha === sha && events.includes(item.event) &&
+    (item.event === 'pull_request' || item.head_branch === 'main');
+  let run;
+  if (triggeringRunId) {
+    run = await api.request(`${base}/actions/runs/${triggeringRunId}/attempts/${triggeringAttempt}`);
+  } else {
+    const eventFilter = event === 'main' ? '' : `&event=${event}`;
+    const response = await api.request(`${base}/actions/workflows/ci.yml/runs?head_sha=${sha}${eventFilter}&per_page=100`);
+    run = response.workflow_runs?.filter(eligible).sort((left, right) => Number(right.id) - Number(left.id))[0];
+  }
+  if (!eligible(run) || run.repository?.full_name !== api.repository ||
+      !/^[1-9]\d*$/.test(String(run.run_attempt)) ||
+      (triggeringRunId && (String(run.id) !== String(triggeringRunId) ||
+        String(run.run_attempt) !== String(triggeringAttempt))) ||
+      run.status !== 'completed' || run.conclusion !== 'success') {
     throw new Error('Production requires the exact successful canonical Project CI run.');
   }
   await assertWorkflowIdentity(api, run, 'ci.yml');
-  const jobs = await api.request(`${base}/actions/runs/${run.id}/jobs?per_page=100`);
-  const checks = await checkRuns(api, sha);
+  const jobs = await api.request(`${base}/actions/runs/${run.id}/attempts/${run.run_attempt}/jobs?per_page=100`);
   for (const name of PUSH_CHECKS) {
     const job = jobs.jobs?.find(item => item.name === name);
-    const check = checks.find(item => job?.check_run_url === `https://api.github.com${base}/check-runs/${item.id}`);
+    const prefix = `https://api.github.com${base}/check-runs/`;
+    const checkId = job?.check_run_url?.startsWith(prefix) ? job.check_run_url.slice(prefix.length) : '';
     if (!job || job.conclusion !== 'success' || job.status !== 'completed' ||
-        check?.name !== name || check.head_sha !== sha || check.app?.slug !== 'github-actions' ||
+        !/^\d+$/.test(checkId)) {
+      throw new Error(`${name} does not belong to the exact successful canonical CI run.`);
+    }
+    const check = await api.request(`${base}/check-runs/${checkId}`);
+    if (String(check?.id) !== checkId || check.name !== name ||
+        check.head_sha !== sha || check.app?.slug !== 'github-actions' ||
         check.status !== 'completed' || check.conclusion !== 'success') {
       throw new Error(`${name} does not belong to the exact successful canonical CI run.`);
     }
@@ -263,8 +285,10 @@ async function main() {
   }
 
   const api = new GitHubApi(repository, process.env.GITHUB_TOKEN);
-  await waitForRequiredChecks({ api, sha: targetSha, requiredNames: PUSH_CHECKS });
-  await assertProjectCIProvenance(api, targetSha, 'push', process.env.TRIGGERING_CI_RUN_ID || '');
+  // A workflow_run candidate is already complete. Authenticate its own jobs
+  // and checks directly; another run on the same SHA must not replace them.
+  await assertProjectCIProvenance(api, targetSha, 'main',
+    process.env.TRIGGERING_CI_RUN_ID || '', process.env.TRIGGERING_CI_RUN_ATTEMPT || '');
 
   const pullRequests = await api.request(
     `/repos/${repository}/commits/${encodeURIComponent(targetSha)}/pulls?per_page=100`

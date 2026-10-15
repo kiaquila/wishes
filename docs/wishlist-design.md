@@ -312,3 +312,40 @@ plus build, syntax and delivery checks. The deterministic delivery model reports
 baseline. It now counts the initial small preview in HTML; it does not measure
 the subsequent JavaScript-requested full photo, which the browser suite checks
 separately. No baseline or tolerance was changed.
+
+## Uniform photos, hooded cape and Davines — 2026-10-15
+
+The wishlist now has 23 items. The attached beaded garment is described as
+“Такая накидка с капюшоном”, following the slippers' reference-specific wording.
+Davines SOLU Sea Salt Scrub Cleanser specifies 250 мл and links to Care to
+Beauty's Argentina storefront. Product sources, price limitations and image
+editing prompts are recorded in [wishlist-image-preparation.md](wishlist-image-preparation.md).
+
+Every photo and responsive variant now has a 3:2 composition in both layouts.
+Portrait and square photos were extended with the built-in imagegen tool;
+Torres, Montenegro and the Davines packshot were cropped where the complete
+subject could be retained. The existing 3:2 photos are unchanged. Image frames
+use `contain`, with proportional width limits on short screens, so the full
+prepared image remains visible. The persisted `square` view key still opens
+the grid; its visible label is now simply “Сетка”. Static neighbours and the
+counter match all 23 wishes before JavaScript runs.
+
+Chrome QA confirms all 115 carousel cases (23 wishes at 1512×770, 390×844,
+360×640, 844×390 and 1024×640) show loaded, proportional images and complete
+cards/footer without page overflow. The desktop three-column grid and mobile
+one-column grid use the same 3:2 frames. Full-grid and individual cape/Davines
+screenshots were inspected; no console warnings or errors were captured.
+The temporary viewport override was reset.
+
+Integration with the newer main retains its cold-load preview fix and all nine
+Chromium regressions. They now cover 23 wishes at five viewport sizes in both
+preview and decoded states (230 layout checks), plus slow loads, late responses
+and rapid navigation. No browser test or guardrail was weakened.
+
+`npm run preflight` passes 32 harness, ten site, nine browser and eight
+production tests, the build and syntax checks. The new image test reads all 69
+WebP headers to verify actual aspect ratios, responsive sizes and intrinsic
+metadata. Delivery measures 865ms first paint and 1074ms full load against the
+unchanged 1066ms / 1271ms baseline. As in main's browser-test change, this model
+counts the initial HTML preview; the browser suite verifies the subsequent
+JavaScript-requested full photo separately.

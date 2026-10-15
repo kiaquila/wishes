@@ -1,6 +1,6 @@
 # wishes
 
-Personal wishlist with a portfolio-style carousel and square grid. The wishes
+Personal wishlist with a portfolio-style carousel and a grid of 3:2 photos. The wishes
 include rose petal jam, hydrogel eye patches, a crane kimono in size M and an
 embroidered velvet pouch. The page uses plain HTML, CSS and JavaScript with
 locally hosted Manrope fonts matching the supplied KS Design reference.

@@ -273,3 +273,33 @@ Chrome QA on 2026-10-15:
   Preflight also passes 32 harness and eight production tests plus syntax,
   build, repository and delivery checks. Delivery is 1112ms first paint and
   1321ms full load against the unchanged 1066ms / 1271ms baseline.
+
+## Uniform photos, hooded cape and Davines — 2026-10-15
+
+The wishlist now has 23 items. The attached beaded garment is described as
+“Такая накидка с капюшоном”, following the slippers' reference-specific wording.
+Davines SOLU Sea Salt Scrub Cleanser specifies 250 мл and links to Care to
+Beauty's Argentina storefront. Product sources, price limitations and image
+editing prompts are recorded in [wishlist-image-preparation.md](wishlist-image-preparation.md).
+
+Every photo and responsive variant now has a 3:2 composition in both layouts.
+Portrait and square photos were extended with the built-in imagegen tool;
+Torres, Montenegro and the Davines packshot were cropped where the complete
+subject could be retained. The existing 3:2 photos are unchanged. Image frames
+use `contain`, with proportional width limits on short screens, so the full
+prepared image remains visible. The persisted `square` view key still opens
+the grid; its visible label is now simply “Сетка”. Static neighbours and the
+counter match all 23 wishes before JavaScript runs.
+
+Chrome QA confirms all 115 carousel cases (23 wishes at 1512×770, 390×844,
+360×640, 844×390 and 1024×640) show loaded, proportional images and complete
+cards/footer without page overflow. The desktop three-column grid and mobile
+one-column grid use the same 3:2 frames. Full-grid and individual cape/Davines
+screenshots were inspected; no console warnings or errors were captured.
+The temporary viewport override was reset.
+
+`npm run preflight` passes 32 harness, ten site and eight production tests,
+the build and syntax checks. The new image test reads all 69 WebP headers to
+verify actual aspect ratios, responsive sizes and intrinsic metadata. Delivery
+measures 1035ms first paint and 1244ms full load against the unchanged
+1066ms / 1271ms baseline.

@@ -9,13 +9,13 @@ const viewButtons = [...document.querySelectorAll('[data-view]')];
 let index = 0;
 let selection = 0;
 const imageCache = new Map();
-const selectedSizes = '(max-width: 760px) calc(100vw - 84px), (max-height: 680px) and (min-width: 761px) calc((min(74vw, 760px) - 72px) / 2), min(50vw, max(432px, calc((60vh - 176px) * 1.92)))';
+const selectedSizes = '(max-width: 760px) calc(100vw - 84px), (max-height: 680px) and (min-width: 761px) calc((min(74vw, 760px) - 72px) / 2), min(50vw, max(432px, calc((60vh - 176px) * 1.62)))';
 
 function describeImage(img, item) {
   img.alt = item.alt;
   img.width = item.width || 1536;
   img.height = item.height || 1024;
-  img.style.objectFit = item.fit || 'cover';
+  img.style.objectFit = 'contain';
   img.style.backgroundColor = item.background || 'transparent';
 }
 
@@ -133,7 +133,7 @@ function select(nextIndex, announce = true) {
     img.alt = '';
     img.width = 192;
     img.height = 128;
-    img.style.objectFit = item.fit || 'cover';
+    img.style.objectFit = 'contain';
     img.style.backgroundColor = item.background || 'transparent';
     button.replaceChildren(img);
     button.setAttribute('aria-label', `Выбрать: ${item.title}`);

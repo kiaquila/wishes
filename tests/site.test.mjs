@@ -26,14 +26,46 @@ test('the built wishlist ships all photos, thumbnails, fonts and referenced reso
     assert.ok(content.length > 0, `${path} must ship in the build`);
     if (path.endsWith('.webp')) assert.equal(content.subarray(8, 12).toString(), 'WEBP');
   }
-  assert.equal(items.length, 21);
+  assert.equal(items.length, 23);
   assert.match(items.find(item => item.id === 'hydrogel-patches').description, /Faberlic Oceanum/);
   assert.doesNotMatch(html, /data-view="landscape"|Selected projects/i);
 });
 
+function webpDimensions(bytes) {
+  assert.equal(bytes.subarray(0, 4).toString(), 'RIFF');
+  assert.equal(bytes.subarray(8, 12).toString(), 'WEBP');
+  for (let offset = 12; offset + 8 <= bytes.length;) {
+    const type = bytes.subarray(offset, offset + 4).toString();
+    const start = offset + 8;
+    if (type === 'VP8X') return [bytes.readUIntLE(start + 4, 3) + 1, bytes.readUIntLE(start + 7, 3) + 1];
+    if (type === 'VP8 ') return [bytes.readUInt16LE(start + 6) & 0x3fff, bytes.readUInt16LE(start + 8) & 0x3fff];
+    if (type === 'VP8L') {
+      const bits = bytes.readUInt32LE(start + 1);
+      return [(bits & 0x3fff) + 1, ((bits >>> 14) & 0x3fff) + 1];
+    }
+    const size = bytes.readUInt32LE(offset + 4);
+    offset = start + size + (size % 2);
+  }
+  assert.fail('WebP image has no dimensions');
+}
+
+test('every responsive photo shares the uncropped 3:2 frame and accurate intrinsic dimensions', async () => {
+  for (const item of items) {
+    for (const [path, expected] of [
+      [item.image, [item.width || 1536, item.height || 1024]],
+      [`/assets/${item.id}-768.webp`, [768, 512]],
+      [`/assets/${item.id}-192.webp`, [192, 128]],
+    ]) {
+      const dimensions = webpDimensions(await readFile(new URL(`../dist${path}`, import.meta.url)));
+      assert.deepEqual(dimensions, expected, path);
+      assert.equal(dimensions[0] * 2, dimensions[1] * 3, `${path} must use the shared 3:2 composition`);
+    }
+  }
+});
+
 test('shop links preserve the requested products and kimono variant', () => {
   const linked = items.filter(item => item.url);
-  assert.deepEqual(linked.map(item => item.id), ['rose-jam', 'crane-kimono', 'k18-hair-mask', 'rare-beauty-highlighter', 'kaws-universe-set']);
+  assert.deepEqual(linked.map(item => item.id), ['rose-jam', 'crane-kimono', 'k18-hair-mask', 'rare-beauty-highlighter', 'kaws-universe-set', 'davines-solu-scrub']);
   const kimono = linked.find(item => item.id === 'crane-kimono');
   assert.match(kimono.description, /Размер M/);
   const url = new URL(kimono.url);
@@ -51,6 +83,10 @@ test('shop links preserve the requested products and kimono variant', () => {
   assert.equal(kaws.url, 'https://stockx.com/kaws-universe-x-uniqlo-bag-charm-set-of-3-yellow-blue-light-green');
   assert.match(kaws.title, /KAWS UNIVERSE × UNIQLO/);
   assert.match(kaws.description, /Bag Charm Set of 3/);
+  const scrub = linked.find(item => item.id === 'davines-solu-scrub');
+  assert.equal(scrub.url, 'https://www.caretobeauty.com/ar/en/davines-solu-sea-salt-scrub-cleanser-250ml/');
+  assert.equal(scrub.description, 'SOLU Sea Salt Scrub Cleanser, 250 мл');
+  assert.equal(items.find(item => item.id === 'hooded-cape').title, 'Такая накидка с капюшоном');
 });
 
 // Keep image downloads under test control so completions can arrive out of
@@ -124,7 +160,7 @@ test('pending slides show their own preview and ignore out-of-order downloads', 
   assert.equal(secondPreview.src, '/assets/hydrogel-patches-192.webp');
   assert.equal(secondPreview.alt, items[1].alt);
   assert.equal(selected.querySelector('h2').textContent, items[1].title);
-  assert.equal(elements.get('.counter').textContent, '2/21');
+  assert.equal(elements.get('.counter').textContent, `2/${items.length}`);
   const secondDownload = downloads[1];
   next();
   const thirdDownload = downloads[2];
@@ -186,7 +222,7 @@ test('wraparound, preview and keyboard navigation keep the selected content toge
   const { selected, elements, previews, previous } = await carouselFixture();
   previous();
   assert.equal(selected.querySelector('img').src, `/assets/${items.at(-1).id}-192.webp`);
-  assert.equal(elements.get('.counter').textContent, '21/21');
+  assert.equal(elements.get('.counter').textContent, `${items.length}/${items.length}`);
   previews[2].onclick();
   assert.equal(selected.querySelector('img').src, '/assets/rose-jam-192.webp');
   elements.get('.gallery').listeners.keydown({ key: 'ArrowRight', preventDefault() {} });

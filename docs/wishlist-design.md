@@ -204,3 +204,34 @@ errors were captured. The viewport override was reset.
 Preflight passes 32 harness, six site and eight production tests, build and
 syntax checks. Delivery is 1071ms first paint and 1277ms full load, within the
 unchanged 1066ms / 1271ms baseline tolerance.
+
+## KAWS UNIVERSE × UNIQLO set — 2026-10-14
+
+The twenty-first wish is “Набор брелоков KAWS UNIVERSE × UNIQLO”, with the
+product name “Bag Charm Set of 3” and the Sun, Earth and Moon in its description.
+Its shop link points to the user's exact
+[StockX listing](https://stockx.com/kaws-universe-x-uniqlo-bag-charm-set-of-3-yellow-blue-light-green).
+
+The listing's product photograph was processed with the built-in imagegen
+tool to remove the white background and prepare a transparent 3:2 cutout.
+The delivered assets are `site/assets/kaws-universe-set-1536.webp` (1536×1024),
+`site/assets/kaws-universe-set-768.webp` (768×512), and
+`site/assets/kaws-universe-set-192.webp` (192×128). The card uses `contain`
+against the existing `#f2f2f3` background so all three charms remain visible.
+WebP exports clear RGB data in fully transparent pixels and preserve it with
+the encoder's `exact` option. This prevents hidden colour bands when a viewer
+ignores alpha; the 1536px export's alpha mask matches the imagegen PNG exactly.
+
+Exact image-edit prompt:
+
+> Use case: background-extraction. Asset type: exact product photograph for a personal wishlist square grid and landscape carousel. Input image: edit target, a StockX photograph of the KAWS UNIVERSE x UNIQLO Bag Charm Set of 3. Remove only the white background and excess white canvas. Preserve the exact three photographed plush charms, their original shapes, fuzzy fabric, embroidery, blue/green Earth pattern, yellow Sun rays, pale mint Moon craters, black XX eyes, small mouths, dangling arms and legs, colored fabric straps and metallic key rings. Keep their original left-to-right order: Sun, Earth, Moon, standing side by side and not overlapping. All three key rings and limbs must remain fully inside the canvas. Frame the trio centrally on a transparent landscape 3:2 canvas, with about 7 percent empty padding around the whole group, optimized to fit entirely in a square card with object-fit contain. Do not add, redraw, restyle, recolor or change any product details. No text, labels, shadows, reflections, scenery, borders or watermark. Return one clean transparent cutout.
+
+In-app browser QA confirms complete cutouts, readable titles and the exact
+StockX link in the carousel and square grid at 1280×720 and 390×844. The
+desktop grid's image frame is 310.84×310.84px. Carousel QA at 844×390 and
+390×667 also confirms that the card and footer fit without page overflow.
+There are no console errors; the temporary viewport override was reset.
+
+`npm run preflight` passes 32 harness, six site and eight production tests,
+the build and syntax checks. Delivery measures 1072ms first paint and 1278ms
+full load against the unchanged 1066ms / 1271ms baseline.

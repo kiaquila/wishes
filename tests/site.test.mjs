@@ -26,14 +26,14 @@ test('the built wishlist ships all photos, thumbnails, fonts and referenced reso
     assert.ok(content.length > 0, `${path} must ship in the build`);
     if (path.endsWith('.webp')) assert.equal(content.subarray(8, 12).toString(), 'WEBP');
   }
-  assert.equal(items.length, 20);
+  assert.equal(items.length, 21);
   assert.match(items.find(item => item.id === 'hydrogel-patches').description, /Faberlic Oceanum/);
   assert.doesNotMatch(html, /data-view="landscape"|Selected projects/i);
 });
 
 test('shop links preserve the requested products and kimono variant', () => {
   const linked = items.filter(item => item.url);
-  assert.deepEqual(linked.map(item => item.id), ['rose-jam', 'crane-kimono', 'k18-hair-mask']);
+  assert.deepEqual(linked.map(item => item.id), ['rose-jam', 'crane-kimono', 'k18-hair-mask', 'kaws-universe-set']);
   const kimono = linked.find(item => item.id === 'crane-kimono');
   assert.match(kimono.description, /Размер M/);
   const url = new URL(kimono.url);
@@ -46,6 +46,10 @@ test('shop links preserve the requested products and kimono variant', () => {
     assert.equal(shop.hostname, 'www.mercadolibre.com.ar');
     assert.ok(shop.pathname.endsWith(`/up/${product}`));
   }
+  const kaws = linked.find(item => item.id === 'kaws-universe-set');
+  assert.equal(kaws.url, 'https://stockx.com/kaws-universe-x-uniqlo-bag-charm-set-of-3-yellow-blue-light-green');
+  assert.match(kaws.title, /KAWS UNIVERSE × UNIQLO/);
+  assert.match(kaws.description, /Bag Charm Set of 3/);
 });
 
 // Model request state separately from attributes: updating src/srcset on a
@@ -124,7 +128,7 @@ test('navigation discards the previous bitmap while the new image is pending', a
   assert.equal(second.fetchPriority, 'high');
   assert.equal(second.className, 'selected-image');
   assert.equal(selected.querySelector('h2').textContent, items[1].title);
-  assert.equal(elements.get('.counter').textContent, '2/20');
+  assert.equal(elements.get('.counter').textContent, '2/21');
   next();
   const third = selected.querySelector('img');
   previous();
@@ -140,7 +144,7 @@ test('wraparound, preview and keyboard navigation keep the selected content toge
   const { selected, elements, previews, previous } = await carouselFixture();
   previous();
   assert.equal(selected.querySelector('img').src, items.at(-1).image);
-  assert.equal(elements.get('.counter').textContent, '20/20');
+  assert.equal(elements.get('.counter').textContent, '21/21');
   previews[2].onclick();
   assert.equal(selected.querySelector('img').src, items[0].image);
   elements.get('.gallery').listeners.keydown({ key: 'ArrowRight', preventDefault() {} });

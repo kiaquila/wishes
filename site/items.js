@@ -214,6 +214,18 @@ export const items = [
     background: '#f2f2f3',
     alt: 'Белая кружка с блюдцем на полке магазина',
   },
+  {
+    id: 'kaws-universe-set',
+    title: 'Набор брелоков KAWS UNIVERSE × UNIQLO',
+    description: 'Bag Charm Set of 3: Солнце, Земля и Луна.',
+    image: '/assets/kaws-universe-set-1536.webp',
+    width: 1536,
+    height: 1024,
+    fit: 'contain',
+    background: '#f2f2f3',
+    alt: 'Три плюшевых брелока KAWS × UNIQLO: жёлтое Солнце, сине-зелёная Земля и мятная Луна',
+    url: 'https://stockx.com/kaws-universe-x-uniqlo-bag-charm-set-of-3-yellow-blue-light-green',
+  },
 ];
 
 export const views = ['gallery', 'square'];

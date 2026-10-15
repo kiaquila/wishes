@@ -108,7 +108,7 @@ test('production independently requires the owner request, marker and current-he
 });
 
 test('a duplicate Project CI workflow and unrelated same-named checks cannot release production', async () => {
-  const run = { id: 42, workflow_id: 10, path: '.github/workflows/ci.yml', head_sha: sha, event: 'push',
+  const run = { id: 42, workflow_id: 10, path: '.github/workflows/ci.yml', head_sha: sha, event: 'push', head_branch: 'main',
     status: 'completed', conclusion: 'success', repository: { full_name: 'kiaquila/wishes' } };
   const checks = ['validate', 'osv-scan'].map((name, index) => ({ ...checked(name), id: index + 1,
     head_sha: sha, app: { slug: 'github-actions' } }));
@@ -130,4 +130,29 @@ test('a duplicate Project CI workflow and unrelated same-named checks cannot rel
   await assertProjectCIProvenance(api, sha, 'push');
   run.event = 'pull_request';
   await assertProjectCIProvenance(api, sha, 'pull_request');
+  await assert.rejects(assertProjectCIProvenance(api, sha), /canonical Project CI/);
+
+  // A missing push event can be recovered by running the same CI on main.
+  run.event = 'workflow_dispatch';
+  await assertProjectCIProvenance(api, sha, 'main', '42');
+  run.head_branch = 'feature';
+  await assert.rejects(assertProjectCIProvenance(api, sha), /canonical Project CI/);
+  run.head_branch = 'main';
+  run.head_sha = 'b'.repeat(40);
+  await assert.rejects(assertProjectCIProvenance(api, sha), /canonical Project CI/);
+  run.head_sha = sha;
+  run.repository.full_name = 'untrusted/fork';
+  await assert.rejects(assertProjectCIProvenance(api, sha), /canonical Project CI/);
+  run.repository.full_name = 'kiaquila/wishes';
+  await assert.rejects(assertProjectCIProvenance(api, sha, 'main', '99'), /canonical Project CI/);
+  run.conclusion = 'failure';
+  await assert.rejects(assertProjectCIProvenance(api, sha), /canonical Project CI/);
+  run.conclusion = 'success';
+  run.workflow_id = 99;
+  await assert.rejects(assertProjectCIProvenance(api, sha), /canonical workflow identity/);
+  run.workflow_id = 10;
+  jobs[0].check_run_url += '99';
+  await assert.rejects(assertProjectCIProvenance(api, sha), /validate does not belong/);
+  jobs[0].check_run_url = 'https://api.github.com/repos/kiaquila/wishes/check-runs/1';
+  await assert.rejects(assertProjectCIProvenance(api, sha, 'repository_dispatch'), /Untrusted Project CI event/);
 });

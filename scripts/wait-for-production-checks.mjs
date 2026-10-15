@@ -190,10 +190,16 @@ export async function assertCodexCheckProvenance(api, sha) {
   }
 }
 
-export async function assertProjectCIProvenance(api, sha, event, triggeringRunId = '') {
+export async function assertProjectCIProvenance(api, sha, event = 'main', triggeringRunId = '') {
+  const events = event === 'main' ? ['push', 'workflow_dispatch'] : [event];
+  if (events.some(value => !['push', 'workflow_dispatch', 'pull_request'].includes(value))) {
+    throw new Error('Untrusted Project CI event.');
+  }
   const base = `/repos/${api.repository}`;
-  const response = await api.request(`${base}/actions/workflows/ci.yml/runs?head_sha=${sha}&event=${event}&per_page=100`);
-  const run = response.workflow_runs?.filter(item => item.head_sha === sha && item.event === event)
+  const eventFilter = event === 'main' ? '' : `&event=${event}`;
+  const response = await api.request(`${base}/actions/workflows/ci.yml/runs?head_sha=${sha}${eventFilter}&per_page=100`);
+  const run = response.workflow_runs?.filter(item => item.head_sha === sha && events.includes(item.event) &&
+    (item.event === 'pull_request' || item.head_branch === 'main'))
     .sort((left, right) => Number(right.id) - Number(left.id))[0];
   if (!run || run.repository?.full_name !== api.repository ||
       run.status !== 'completed' || run.conclusion !== 'success' ||
@@ -264,7 +270,7 @@ async function main() {
 
   const api = new GitHubApi(repository, process.env.GITHUB_TOKEN);
   await waitForRequiredChecks({ api, sha: targetSha, requiredNames: PUSH_CHECKS });
-  await assertProjectCIProvenance(api, targetSha, 'push', process.env.TRIGGERING_CI_RUN_ID || '');
+  await assertProjectCIProvenance(api, targetSha, 'main', process.env.TRIGGERING_CI_RUN_ID || '');
 
   const pullRequests = await api.request(
     `/repos/${repository}/commits/${encodeURIComponent(targetSha)}/pulls?per_page=100`

@@ -41,6 +41,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
           TRIGGERING_CI_RUN_ID: ${{ github.event.workflow_run.id || '' }}
+          TRIGGERING_CI_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt || '' }}
         run: node scripts/wait-for-production-checks.mjs
       - name: Record the validated revision
         id: revision

@@ -25,7 +25,9 @@ credentials are released, the gate requires:
 
 - Successful `validate` and `osv-scan` on the production SHA.
 - Both CI checks belong to the exact successful canonical `ci.yml` run;
-  automatic deployment also verifies that this is the triggering run.
+  automatic deployment also verifies the triggering run ID and attempt.
+  Jobs and checks are fetched from that exact attempt, so a concurrent run or
+  rerun cannot replace its evidence.
 - An exact matching merged PR into main.
 - Successful `validate`, `osv-scan` and `Codex Review` on that PR's reviewed head.
 - The AI check belongs to the trusted Codex workflow, with a matching trusted

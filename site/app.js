@@ -7,24 +7,84 @@ const selected = document.querySelector('.selected-card');
 const announcement = document.querySelector('#announcement');
 const viewButtons = [...document.querySelectorAll('[data-view]')];
 let index = 0;
+let selection = 0;
+const imageCache = new Map();
+const selectedSizes = '(max-width: 760px) calc(100vw - 84px), (max-height: 680px) and (min-width: 761px) calc((min(74vw, 760px) - 72px) / 2), min(50vw, max(432px, calc((60vh - 176px) * 1.92)))';
 
-function fillCard(card, item) {
-  const previousImage = card.querySelector('img');
-  // A reused <img> can keep painting its previous bitmap while the next
-  // request is pending. Give each selected wish its own image request state.
-  const isSelected = card.classList.contains('selected-card');
-  const img = isSelected ? previousImage.cloneNode(false) : previousImage;
-  img.src = item.image;
-  img.srcset = `/assets/${item.id}-768.webp 768w, ${item.image} ${item.width || 1536}w`;
-  img.sizes = card.classList.contains('selected-card')
-    ? '(max-width: 760px) calc(100vw - 84px), (max-height: 680px) and (min-width: 761px) calc((min(74vw, 760px) - 72px) / 2), min(50vw, max(432px, calc((60vh - 176px) * 1.92)))'
-    : '(max-width: 480px) calc(100vw - 68px), (max-width: 760px) 40vw, 26vw';
+function describeImage(img, item) {
   img.alt = item.alt;
   img.width = item.width || 1536;
   img.height = item.height || 1024;
   img.style.objectFit = item.fit || 'cover';
   img.style.backgroundColor = item.background || 'transparent';
-  if (isSelected) previousImage.replaceWith(img);
+}
+
+function loadImage(item, priority = 'low', img = document.createElement('img')) {
+  if (imageCache.has(item.id)) {
+    const cached = imageCache.get(item.id);
+    cached.img.fetchPriority = priority;
+    return cached;
+  }
+  describeImage(img, item);
+  img.className = 'selected-image';
+  img.fetchPriority = priority;
+  img.decoding = 'async';
+  // Configure responsive selection before src to avoid a fallback request.
+  img.sizes = selectedSizes;
+  img.srcset = `/assets/${item.id}-768.webp 768w, ${item.image} ${item.width || 1536}w`;
+  img.src = item.image;
+  const entry = { img, loaded: false };
+  imageCache.set(item.id, entry);
+  entry.ready = img.decode().then(() => {
+    entry.loaded = true;
+    return true;
+  }, () => {
+    if (imageCache.get(item.id) === entry) imageCache.delete(item.id);
+    return false;
+  });
+  return entry;
+}
+
+function showSelectedImage(item) {
+  const currentSelection = ++selection;
+  const previousImage = selected.querySelector('img');
+  // Reuse the initial HTML image and its request. Later selections immediately
+  // show their own tiny preview until the responsive photo is decoded.
+  const entry = loadImage(item, 'high', currentSelection === 1 ? previousImage : undefined);
+  const preview = document.createElement('img');
+  describeImage(preview, item);
+  preview.className = 'selected-image';
+  preview.src = `/assets/${item.id}-192.webp`;
+  if (currentSelection !== 1) previousImage.replaceWith(entry.loaded ? entry.img : preview);
+  const nearby = [-1, 0, 1].map(offset => items[wrapIndex(index + offset, items.length)].id);
+  for (const [id, cached] of imageCache) {
+    if (nearby.includes(id)) continue;
+    imageCache.delete(id);
+    if (!cached.loaded) {
+      cached.img.removeAttribute('src');
+      cached.img.removeAttribute('srcset');
+    }
+  }
+  entry.ready.then(loaded => {
+    if (selection !== currentSelection) return;
+    const displayed = selected.querySelector('img');
+    if (displayed !== entry.img || !loaded) displayed.replaceWith(loaded ? entry.img : preview);
+    if (!loaded || gallery.hidden) return;
+    // Warm only the adjacent slides, after the selected photo has loaded.
+    for (const offset of [-1, 1]) loadImage(items[wrapIndex(index + offset, items.length)]);
+  });
+}
+
+function fillCard(card, item) {
+  if (card === selected) {
+    showSelectedImage(item);
+  } else {
+    const img = card.querySelector('img');
+    describeImage(img, item);
+    img.sizes = '(max-width: 480px) calc(100vw - 68px), (max-width: 760px) 40vw, 26vw';
+    img.srcset = `/assets/${item.id}-768.webp 768w, ${item.image} ${item.width || 1536}w`;
+    img.src = item.image;
+  }
   card.querySelector('h2').textContent = item.title;
   const description = card.querySelector('p');
   description.textContent = item.description;

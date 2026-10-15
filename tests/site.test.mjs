@@ -33,7 +33,7 @@ test('the built wishlist ships all photos, thumbnails, fonts and referenced reso
 
 test('shop links preserve the requested products and kimono variant', () => {
   const linked = items.filter(item => item.url);
-  assert.deepEqual(linked.map(item => item.id), ['rose-jam', 'crane-kimono', 'k18-hair-mask', 'kaws-universe-set']);
+  assert.deepEqual(linked.map(item => item.id), ['rose-jam', 'crane-kimono', 'k18-hair-mask', 'rare-beauty-highlighter', 'kaws-universe-set']);
   const kimono = linked.find(item => item.id === 'crane-kimono');
   assert.match(kimono.description, /Размер M/);
   const url = new URL(kimono.url);
@@ -46,26 +46,26 @@ test('shop links preserve the requested products and kimono variant', () => {
     assert.equal(shop.hostname, 'www.mercadolibre.com.ar');
     assert.ok(shop.pathname.endsWith(`/up/${product}`));
   }
+  assert.equal(linked.find(item => item.id === 'rare-beauty-highlighter').url, 'https://www.mercadolibre.com.ar/rare-beauty-highlighter-mesmerize-tono-del-iluminador-rosa-gold/p/MLA27976835');
   const kaws = linked.find(item => item.id === 'kaws-universe-set');
   assert.equal(kaws.url, 'https://stockx.com/kaws-universe-x-uniqlo-bag-charm-set-of-3-yellow-blue-light-green');
   assert.match(kaws.title, /KAWS UNIVERSE × UNIQLO/);
   assert.match(kaws.description, /Bag Charm Set of 3/);
 });
 
-// Model request state separately from attributes: updating src/srcset on a
-// mounted image does not discard the bitmap the browser already decoded.
+// Keep image downloads under test control so completions can arrive out of
+// order, fail, or be cancelled independently of the currently displayed card.
 async function carouselFixture() {
   const { runInNewContext } = await import('node:vm');
+  const downloads = [];
   class Element {
     constructor(className = '') {
       this.className = className;
-      this.classList = { contains: name => this.className.split(' ').includes(name) };
       this.style = {};
       this.dataset = {};
       this.attributes = {};
       this.children = new Map();
       this.listeners = {};
-      this.paintedImage = null;
     }
     querySelector(selector) {
       if (!this.children.has(selector)) {
@@ -76,15 +76,12 @@ async function carouselFixture() {
       return this.children.get(selector);
     }
     setAttribute(name, value) { this.attributes[name] = value; }
-    removeAttribute(name) { delete this.attributes[name]; }
+    removeAttribute(name) { delete this.attributes[name]; delete this[name]; }
     addEventListener(name, callback) { this.listeners[name] = callback; }
     append() {}
     replaceChildren() {}
-    cloneNode() {
-      const clone = new Element(this.className);
-      for (const name of ['src', 'srcset', 'sizes', 'alt', 'width', 'height', 'fetchPriority']) clone[name] = this[name];
-      clone.style = { ...this.style };
-      return clone;
+    decode() {
+      return new Promise((resolve, reject) => downloads.push({ img: this, resolve, reject }));
     }
     replaceWith(next) {
       next.parent = this.parent;
@@ -94,7 +91,6 @@ async function carouselFixture() {
   }
   const elements = new Map(['main', '.gallery', '.grid', '.selected-card', '#announcement', '.counter'].map(name => [name, new Element(name.slice(1))]));
   const selected = elements.get('.selected-card');
-  selected.querySelector('img').fetchPriority = 'high';
   const directions = [-1, 1].map(direction => {
     const button = new Element();
     button.dataset.direction = String(direction);
@@ -111,43 +107,89 @@ async function carouselFixture() {
     document, items, normalizeView, wrapIndex,
     localStorage: { getItem: () => null, setItem() {} },
   });
-  return { selected, elements, previews, previous: () => directions[0].listeners.click(), next: () => directions[1].listeners.click() };
+  const finish = async (download, success = true) => {
+    if (success) download.resolve();
+    else download.reject(new Error('Image request failed'));
+    await new Promise(resolve => setImmediate(resolve));
+  };
+  return { selected, elements, previews, downloads, finish, previous: () => directions[0].listeners.click(), next: () => directions[1].listeners.click() };
 }
 
-test('navigation discards the previous bitmap while the new image is pending', async () => {
-  const { selected, elements, next, previous } = await carouselFixture();
+test('pending slides show their own preview and ignore out-of-order downloads', async () => {
+  const { selected, elements, downloads, finish, next, previous } = await carouselFixture();
   const first = selected.querySelector('img');
-  first.paintedImage = items[0].image;
   next();
-  const second = selected.querySelector('img');
-  assert.notEqual(second, first);
-  assert.equal(first.parent, null);
-  assert.equal(second.paintedImage, null, 'the next title must never accompany the previous decoded bitmap');
-  assert.equal(second.src, items[1].image);
-  assert.match(second.srcset, /hydrogel-patches-768.webp/);
-  assert.equal(second.fetchPriority, 'high');
-  assert.equal(second.className, 'selected-image');
+  const secondPreview = selected.querySelector('img');
+  assert.notEqual(secondPreview, first);
+  assert.equal(secondPreview.src, '/assets/hydrogel-patches-192.webp');
+  assert.equal(secondPreview.alt, items[1].alt);
   assert.equal(selected.querySelector('h2').textContent, items[1].title);
   assert.equal(elements.get('.counter').textContent, '2/21');
+  const secondDownload = downloads[1];
   next();
-  const third = selected.querySelector('img');
+  const thirdDownload = downloads[2];
   previous();
-  const latest = selected.querySelector('img');
-  third.paintedImage = items[2].image; // An older request finishes out of order.
-  assert.equal(third.parent, null);
-  assert.equal(latest.paintedImage, null);
-  assert.equal(latest.src, items[1].image);
+  assert.equal(downloads.length, 3, 'returning to a pending neighbour reuses its request');
+  await finish(thirdDownload);
+  await finish(downloads[0]);
+  assert.equal(selected.querySelector('img').src, '/assets/hydrogel-patches-192.webp');
+  await finish(secondDownload);
+  assert.equal(selected.querySelector('img'), secondDownload.img);
+  assert.equal(selected.querySelector('img').src, items[1].image);
+  assert.equal(selected.querySelector('img').fetchPriority, 'high');
+  assert.equal(selected.querySelector('img').className, 'selected-image');
   assert.equal(selected.querySelector('h2').textContent, items[1].title);
+});
+
+test('adjacent photos warm after the selected photo and decoded photos are reused', async () => {
+  const { selected, downloads, finish, next, previous } = await carouselFixture();
+  assert.equal(downloads.length, 1, 'initial rendering must not compete with preloads');
+  await finish(downloads[0]);
+  assert.equal(downloads.length, 3);
+  assert.equal(downloads[1].img.src, items.at(-1).image);
+  assert.equal(downloads[2].img.src, items[1].image);
+  assert.equal(downloads[2].img.fetchPriority, 'low');
+  await finish(downloads[2]);
+  next();
+  assert.equal(selected.querySelector('img'), downloads[2].img);
+  assert.equal(downloads[2].img.fetchPriority, 'high');
+  previous();
+  assert.equal(selected.querySelector('img'), downloads[0].img);
+});
+
+test('rapid navigation cancels distant pending photos and keeps the latest selection', async () => {
+  const { selected, downloads, finish, next } = await carouselFixture();
+  for (let i = 0; i < 10; i++) next();
+  assert.equal(downloads[0].img.src, undefined, 'distant requests are released');
+  assert.equal(downloads[0].img.srcset, undefined);
+  for (const old of downloads.slice(0, -1).reverse()) await finish(old);
+  assert.equal(selected.querySelector('img').src, `/assets/${items[10].id}-192.webp`);
+  await finish(downloads[10]);
+  assert.equal(selected.querySelector('img').src, items[10].image);
+  assert.equal(downloads.length, 12, 'only the latest selection warms its missing neighbour');
+});
+
+test('a failed full photo keeps its preview and can be retried on return', async () => {
+  const { selected, downloads, finish, next, previous } = await carouselFixture();
+  await finish(downloads[0], false);
+  assert.equal(selected.querySelector('img').src, '/assets/rose-jam-192.webp');
+  next();
+  previous();
+  const retry = downloads.at(-1);
+  assert.equal(retry.img.src, items[0].image);
+  assert.notEqual(retry.img, downloads[0].img);
+  await finish(retry);
+  assert.equal(selected.querySelector('img'), retry.img);
 });
 
 test('wraparound, preview and keyboard navigation keep the selected content together', async () => {
   const { selected, elements, previews, previous } = await carouselFixture();
   previous();
-  assert.equal(selected.querySelector('img').src, items.at(-1).image);
+  assert.equal(selected.querySelector('img').src, `/assets/${items.at(-1).id}-192.webp`);
   assert.equal(elements.get('.counter').textContent, '21/21');
   previews[2].onclick();
-  assert.equal(selected.querySelector('img').src, items[0].image);
+  assert.equal(selected.querySelector('img').src, '/assets/rose-jam-192.webp');
   elements.get('.gallery').listeners.keydown({ key: 'ArrowRight', preventDefault() {} });
-  assert.equal(selected.querySelector('img').src, items[1].image);
+  assert.equal(selected.querySelector('img').src, '/assets/hydrogel-patches-192.webp');
   assert.equal(selected.querySelector('h2').textContent, items[1].title);
 });

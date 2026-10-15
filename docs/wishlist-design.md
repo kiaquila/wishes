@@ -235,3 +235,41 @@ There are no console errors; the temporary viewport override was reset.
 `npm run preflight` passes 32 harness, six site and eight production tests,
 the build and syntax checks. Delivery measures 1072ms first paint and 1278ms
 full load against the unchanged 1066ms / 1271ms baseline.
+
+## Carousel loading and copy revision — 2026-10-15
+
+Rare Beauty now specifies “Оттенок Mesmerize (сухой в пудре)” and links to the
+user's Mercado Libre listing. Janssen's 200 мл is in its heading, the mug is
+“Такая кружка с блюдцем”, and lower captions have no full stops.
+
+Previously, every selection replaced the visible image with an undecoded
+image, leaving an empty frame during network loading. Cloning also retained
+the previous responsive attributes before assigning the next sources. The
+carousel now shows the selected wish's 192px preview while its responsive
+photo loads and decodes. A selection token prevents older completions from
+changing the latest slide. A failed full photo leaves its preview visible and
+can retry on a later visit. Only the current and two adjacent photo elements
+are cached; distant pending requests are released. Adjacent photos preload
+at low priority after the selected photo finishes. Grid photos remain lazy.
+
+Twenty-seven larger WebP assets were re-encoded with cwebp 1.6.0, quality 72,
+method 6, retaining their dimensions and composition. Their combined size
+falls from 4,739,918 to 3,796,980 bytes (19.9%). Italy's largest image falls
+from 404,904 to 279,350 bytes. Initial HTML previews and counter now match the
+21-item list, including KAWS. This corrects the initially stale neighbour
+requests; delivery remains within the unchanged baseline tolerance.
+
+Chrome QA on 2026-10-15:
+
+- A temporary local server delayed full photos by 1.5 seconds. All 42 rapid
+  forward selections showed a loaded image; 18 used the correct preview
+  while the full photo was pending. There were no blank frames.
+- All 105 carousel cases at 1512×770, 390×844, 360×640, 844×390 and 1024×640
+  showed a loaded image and the full footer without page overflow.
+- The grid and carousel show the revised captions and Rare Beauty link.
+  No console warnings or errors were captured; viewport overrides were reset.
+- Nine site tests cover delayed/out-of-order decoding, fast navigation,
+  neighbour reuse, pending cancellation, failure/retry and navigation paths.
+  Preflight also passes 32 harness and eight production tests plus syntax,
+  build, repository and delivery checks. Delivery is 1112ms first paint and
+  1321ms full load against the unchanged 1066ms / 1271ms baseline.

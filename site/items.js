@@ -120,7 +120,7 @@ export const items = [
     title: 'Маска для волос K18, 150 мл, оригинал',
     description: '',
     image: '/assets/k18-hair-mask-1536.webp',
-    alt: 'Белый флакон маски для волос K18, 150 мл, на коралловом фоне',
+    alt: 'Белый флакон маски для волос K18, 150 мл, на светлом серо-бежевом фоне',
     url: 'https://www.mercadolibre.com.ar/k18-leave-in-150ml-reparacion-hair-mascarilla-witou/up/MLAU4002316294',
   },
   {
@@ -137,6 +137,7 @@ export const items = [
     description: '',
     image: '/assets/janssen-cleanser-1536.webp',
     alt: 'Белый флакон геля для умывания Janssen Cosmetics',
+    url: 'https://idn-cosmetics.com/en/janssen-cosmetics-oily-skin-purifying-cleansing-gel',
   },
   {
     id: 'new-garden-mug',

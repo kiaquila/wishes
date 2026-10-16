@@ -75,3 +75,17 @@ Exact K18 prompt:
 Exact waterfall prompt:
 
 > Use case: precise-object-edit. Edit target: attached original photograph. Produce one 1536x1024 LANDSCAPE 3:2 photograph by extending the existing background horizontally. Preserve the original complete waterfall from its source at top to its plunge into the turquoise natural pool. Extend ONLY the same lush green forest, rock cliff and clear blue-green pool to the left and right. Keep water and rock texture photographic and natural. No people or added features. Preserve subject identity, exact geometry, colours and lighting. No stretching, no blur or mirror padding, no borders, no duplicates or decorations.
+
+## K18 neutral background — 2026-10-16
+
+At the user's request, the built-in imagegen tool replaced K18's coral backdrop
+with light warm gray / greige. The existing wishlist photo was the edit target.
+The complete 150 ml bottle, label, framing and soft rightward shadow were
+checked visually before exporting all three responsive WebP sizes using the
+same settings above. The image alt text now describes the neutral background.
+The existing Janssen card also links to the user's exact
+[IDN Cosmetics product URL](https://idn-cosmetics.com/en/janssen-cosmetics-oily-skin-purifying-cleansing-gel).
+
+Exact background-edit prompt:
+
+> Use case: precise-object-edit. Asset type: wishlist product photo. Input image: edit target, the existing 1536x1024 K18 photo. Replace ONLY the saturated coral-red background and ground surface with a quiet very light neutral warm gray / soft greige seamless studio background. Preserve the complete exact original white K18 professional molecular repair hair mask 150 ml bottle: identical silhouette, position, scale, cap, proportions, all original black and coral label printing and exact text including 150 ml / 5 fl oz liq. Preserve the direction and soft shape of its cast shadow on the neutral ground. Maintain the 3:2 landscape 1536x1024 composition and the bottle occupying approximately 82 percent of image height. Keep product photographic and unchanged; no new objects, no added typography, no border, no crop, no decorations, no colorful tint. Change only the background to light neutral gray-beige.

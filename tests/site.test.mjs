@@ -65,7 +65,7 @@ test('every responsive photo shares the uncropped 3:2 frame and accurate intrins
 
 test('shop links preserve the requested products and kimono variant', () => {
   const linked = items.filter(item => item.url);
-  assert.deepEqual(linked.map(item => item.id), ['rose-jam', 'crane-kimono', 'k18-hair-mask', 'rare-beauty-highlighter', 'kaws-universe-set', 'davines-solu-scrub']);
+  assert.deepEqual(linked.map(item => item.id), ['rose-jam', 'crane-kimono', 'k18-hair-mask', 'rare-beauty-highlighter', 'janssen-cleanser', 'kaws-universe-set', 'davines-solu-scrub']);
   const kimono = linked.find(item => item.id === 'crane-kimono');
   assert.match(kimono.description, /Размер M/);
   const url = new URL(kimono.url);

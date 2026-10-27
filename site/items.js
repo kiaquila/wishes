@@ -169,6 +169,21 @@ export const items = [
     alt: 'Баночка скраба Davines SOLU с морской солью, 250 мл',
     url: 'https://www.caretobeauty.com/ar/en/davines-solu-sea-salt-scrub-cleanser-250ml/',
   },
+  {
+    id: 'airpods-5',
+    title: 'AirPods 5 с беспроводным зарядным футляром',
+    description: 'Wireless Charging Case — версия с увеличенным временем работы',
+    image: '/assets/airpods-5-1536.webp',
+    alt: 'Белые AirPods 5 в открытом беспроводном зарядном футляре',
+    url: 'https://www.apple.com/shop/buy-airpods/airpods-5/with-wireless-charging-case',
+  },
+  {
+    id: 'white-city-bike',
+    title: 'Белый городской велосипед с корзиной',
+    description: 'На рост 172 см',
+    image: '/assets/white-city-bike-1536.webp',
+    alt: 'Белый городской велосипед с низкой рамой и передней корзиной с ромашками',
+  },
 ];
 
 export const views = ['gallery', 'square'];

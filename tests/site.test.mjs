@@ -26,7 +26,7 @@ test('the built wishlist ships all photos, thumbnails, fonts and referenced reso
     assert.ok(content.length > 0, `${path} must ship in the build`);
     if (path.endsWith('.webp')) assert.equal(content.subarray(8, 12).toString(), 'WEBP');
   }
-  assert.equal(items.length, 23);
+  assert.equal(items.length, 25);
   assert.match(items.find(item => item.id === 'hydrogel-patches').description, /Faberlic Oceanum/);
   assert.doesNotMatch(html, /data-view="landscape"|Selected projects/i);
 });
@@ -65,7 +65,7 @@ test('every responsive photo shares the uncropped 3:2 frame and accurate intrins
 
 test('shop links preserve the requested products and kimono variant', () => {
   const linked = items.filter(item => item.url);
-  assert.deepEqual(linked.map(item => item.id), ['rose-jam', 'crane-kimono', 'k18-hair-mask', 'rare-beauty-highlighter', 'janssen-cleanser', 'kaws-universe-set', 'davines-solu-scrub']);
+  assert.deepEqual(linked.map(item => item.id), ['rose-jam', 'crane-kimono', 'k18-hair-mask', 'rare-beauty-highlighter', 'janssen-cleanser', 'kaws-universe-set', 'davines-solu-scrub', 'airpods-5']);
   const kimono = linked.find(item => item.id === 'crane-kimono');
   assert.match(kimono.description, /Размер M/);
   const url = new URL(kimono.url);

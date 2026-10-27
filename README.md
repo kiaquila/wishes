@@ -7,6 +7,8 @@ Case (the longer battery life version) and a white city bicycle with a basket
 for a rider who is 172 cm tall. The page uses plain HTML, CSS and JavaScript with
 locally hosted Manrope fonts matching the supplied KS Design reference.
 
+The source repository is public at `https://github.com/kiaquila/wishes`.
+
 ```bash
 npm run dev
 ```

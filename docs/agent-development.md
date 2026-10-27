@@ -45,13 +45,11 @@ Fix P0–P2 findings and request a new review after any head change. Resolve eve
 review thread. Merge only with current green required checks and a mergeable
 PR; never spoof checks or bypass protection.
 
-GitHub Free does not enforce branch protection for this private repository.
-Enabling server-side required checks and conversation resolution requires
-GitHub Pro. Until then, the agent workflow and scheduled task still require
+The repository is public. The agent workflow and scheduled task require
 `validate`, `osv-scan`, and `Codex Review` to pass before merging; these are
 development policy, not an installed server-side protection rule.
 
-The GitHub Codex integration must have access to this private repository to
+The GitHub Codex integration must have access to this repository to
 respond to requests. These workflows validate real review evidence; they do
 not run an AI model themselves or require a copied API secret.
 

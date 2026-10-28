@@ -1,7 +1,7 @@
 # Wishlist image preparation — 2026-10-15
 
 All delivered images use a 3:2 canvas: 1536×1024, 768×512 and 192×128.
-The pouch retains its existing 1200px filename and uses 1200×800 at full size.
+The pouch and horseback-ride photo use 1200×800 at full size.
 Edited images were exported as WebP, quality 72, method 6; previews use quality
 45. No images are stretched. Existing rose jam, patches, Italy and KAWS assets
 already had the target ratio and are unchanged.
@@ -89,3 +89,19 @@ The existing Janssen card also links to the user's exact
 Exact background-edit prompt:
 
 > Use case: precise-object-edit. Asset type: wishlist product photo. Input image: edit target, the existing 1536x1024 K18 photo. Replace ONLY the saturated coral-red background and ground surface with a quiet very light neutral warm gray / soft greige seamless studio background. Preserve the complete exact original white K18 professional molecular repair hair mask 150 ml bottle: identical silhouette, position, scale, cap, proportions, all original black and coral label printing and exact text including 150 ml / 5 fl oz liq. Preserve the direction and soft shape of its cast shadow on the neutral ground. Maintain the 3:2 landscape 1536x1024 composition and the bottle occupying approximately 82 percent of image height. Keep product photographic and unchanged; no new objects, no added typography, no border, no crop, no decorations, no colorful tint. Change only the background to light neutral gray-beige.
+
+## Horseback ride for two — 2026-10-28
+
+The user's attached 1200×800 photograph shows two riders beside a lake at
+sunset. Its complete 3:2 composition is preserved without cropping, stretching
+or generated edits. `horse-riding-for-two` ships at 1200×800, 768×512 and
+192×128 using the WebP settings above. The full-size photo retains the source
+resolution; the card supplies matching intrinsic dimensions.
+
+Visual QA inspected the new card in the carousel and grid at 1512×770 and
+390×844. Both riders remain visible, the title wraps clearly on mobile, and
+carousel navigation wraps between the last and first wishes. The browser
+regressions check all 26 wishes at five viewport sizes in preview and decoded
+states. Preflight passes 35 harness, ten site, nine browser and eight production
+tests. Delivery is 900ms first paint / 1109ms full load against the unchanged
+1066ms / 1271ms baseline.

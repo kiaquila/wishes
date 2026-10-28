@@ -26,7 +26,7 @@ test('the built wishlist ships all photos, thumbnails, fonts and referenced reso
     assert.ok(content.length > 0, `${path} must ship in the build`);
     if (path.endsWith('.webp')) assert.equal(content.subarray(8, 12).toString(), 'WEBP');
   }
-  assert.equal(items.length, 25);
+  assert.equal(items.length, 26);
   assert.match(items.find(item => item.id === 'hydrogel-patches').description, /Faberlic Oceanum/);
   assert.doesNotMatch(html, /data-view="landscape"|Selected projects/i);
 });

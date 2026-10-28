@@ -38,13 +38,13 @@ const {
 } = rerun;
 const { checkRunPayload, publishCodexReviewCheck } = publisher;
 
-const headSha = "abc123def456";
+const headSha = "abc123def4560000000000000000000000000000";
 const codexUser = { login: "chatgpt-codex-connector[bot]" };
 
 function markerBody() {
   return createCodexReviewRequestMarkerBody({
     headSha,
-    requestId: "10-abc123def456",
+    requestId: "10-abc123def4560000000000000000000000000000",
     sourceCommentId: "10",
     sourceCommentCreatedAt: "2026-08-05T12:00:00Z",
     requestedAt: "2026-08-05T12:00:00Z"
@@ -67,7 +67,7 @@ test("trusted request associations and the Codex command are explicit", () => {
 
 test("request markers bind a GitHub Actions comment to the current head", () => {
   assert.deepEqual(extractCodexReviewRequestMarker(markerBody()), {
-    requestId: "10-abc123def456",
+    requestId: "10-abc123def4560000000000000000000000000000",
     sha: headSha,
     sourceCommentId: "10",
     sourceCommentCreatedAt: "2026-08-05T12:00:00Z",
@@ -80,7 +80,7 @@ test("request markers bind a GitHub Actions comment to the current head", () => 
     created_at: "2026-08-05T12:00:01Z",
     user: { login: "github-actions[bot]" }
   };
-  assert.equal(latestCodexReviewRequestMarker([trusted], headSha)?.requestId, "10-abc123def456");
+  assert.equal(latestCodexReviewRequestMarker([trusted], headSha)?.requestId, "10-abc123def4560000000000000000000000000000");
   assert.equal(
     latestCodexReviewRequestMarker([{ ...trusted, user: { login: "repo-owner" } }], headSha),
     null,
@@ -91,7 +91,7 @@ test("request markers bind a GitHub Actions comment to the current head", () => 
     ...trusted,
     body: createCodexReviewRequestMarkerBody({
       headSha,
-      requestId: "20-abc123def456",
+      requestId: "20-abc123def4560000000000000000000000000000",
       sourceCommentId: "20",
       sourceCommentCreatedAt: "2026-08-05T12:00:00Z",
       requestedAt: "2026-08-05T12:00:00Z"
@@ -102,7 +102,7 @@ test("request markers bind a GitHub Actions comment to the current head", () => 
     ...trusted,
     body: createCodexReviewRequestMarkerBody({
       headSha,
-      requestId: "21-abc123def456",
+      requestId: "21-abc123def4560000000000000000000000000000",
       sourceCommentId: "21",
       sourceCommentCreatedAt: "2026-08-05T12:00:01Z",
       requestedAt: "2026-08-05T12:00:01Z"

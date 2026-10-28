@@ -1,3 +1,4 @@
+import { isStrictNativeCodexReceipt } from "./codex-native-receipt.mjs";
 const TRUSTED_ASSOCIATIONS = new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
 const CODEX_REVIEW_LOGIN = "chatgpt-codex-connector[bot]";
 
@@ -174,18 +175,10 @@ export function latestCodexNativeReviewResult(reviews = [], reviewComments = [],
 }
 
 export function isAcceptableCodexSummaryComment(comment, headSha, requestedAt, sourceCommentId) {
-  const body = String(comment?.body || "");
-  const shortSha = String(headSha || "").slice(0, 10);
-  const commentCreatedAt = Date.parse(comment?.created_at || "");
-  const requestTime = Date.parse(requestedAt || "");
-  const ordering = commentCreatedAt === requestTime
-    ? compareNumericIds(comment?.id, sourceCommentId) > 0
-    : commentCreatedAt > requestTime;
-  const isAfterRequest = !requestedAt ||
-    (Number.isFinite(commentCreatedAt) && Number.isFinite(requestTime) && ordering);
-  return isAfterRequest &&
-    isTrustedCodexLogin(comment?.user?.login) &&
-    /^Codex Review:\s*Didn't find any major issues\./im.test(body) &&
-    Boolean(shortSha) &&
-    new RegExp(`\\*\\*Reviewed commit:\\*\\*\\s*\\\`${shortSha}\\\``, "i").test(body);
+  if (!isTrustedCodexLogin(comment?.user?.login) ||
+      !isStrictNativeCodexReceipt(comment?.body, headSha)) return false;
+  const created = Date.parse(comment?.created_at || "");
+  const requested = Date.parse(requestedAt || "");
+  return !requestedAt || (Number.isFinite(created) && Number.isFinite(requested) &&
+    (created > requested || (created === requested && compareNumericIds(comment?.id, sourceCommentId) > 0)));
 }

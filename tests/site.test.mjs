@@ -86,6 +86,13 @@ test('shop links preserve the requested products and kimono variant', () => {
   const scrub = linked.find(item => item.id === 'davines-solu-scrub');
   assert.equal(scrub.url, 'https://www.caretobeauty.com/ar/en/davines-solu-sea-salt-scrub-cleanser-250ml/');
   assert.equal(scrub.description, 'SOLU Sea Salt Scrub Cleanser, 250 мл');
+  const airpods = linked.find(item => item.id === 'airpods-5');
+  assert.equal(airpods.url, 'https://www.apple.com/shop/buy-airpods/airpods-5/with-wireless-charging-case');
+  assert.match(airpods.title, /AirPods 5/);
+  assert.match(airpods.description, /Wireless Charging Case.*увеличенным временем работы/);
+  const bike = items.find(item => item.id === 'white-city-bike');
+  assert.equal(bike.title, 'Белый городской велосипед с корзиной');
+  assert.equal(bike.description, 'На рост 172 см');
   assert.equal(items.find(item => item.id === 'hooded-cape').title, 'Такая накидка с капюшоном');
 });
 

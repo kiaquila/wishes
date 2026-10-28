@@ -26,11 +26,11 @@ The repository guard checks required infrastructure, secret patterns, personal
 paths, generated directories, symbolic links, workflow permissions, and action
 SHA pins. CI also scans dependencies with OSV and fails on vulnerabilities.
 
-`agent-development.config.json` starts in `bootstrap` phase with no application
-checks. On the first application change, switch to `implementation`, add the
-real build/tests, and configure `performance` for web delivery checks. The
-inherited `check-delivery-speed.mjs` can compare a built site's delivery with
-an explicitly recorded baseline; there is no copied product baseline.
+`agent-development.config.json` uses the `implementation` phase with the
+application build, tests and production-script checks in `projectChecks`.
+Keep these commands aligned with the application. `check-delivery-speed.mjs`
+compares the built site's delivery with the measured wishlist baseline in
+`docs/delivery-baseline.json`; explain any intentional baseline update in the PR.
 
 ## Pull request review
 

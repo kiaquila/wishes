@@ -26,11 +26,11 @@ The repository guard checks required infrastructure, secret patterns, personal
 paths, generated directories, symbolic links, workflow permissions, and action
 SHA pins. CI also scans dependencies with OSV and fails on vulnerabilities.
 
-`agent-development.config.json` starts in `bootstrap` phase with no application
-checks. On the first application change, switch to `implementation`, add the
-real build/tests, and configure `performance` for web delivery checks. The
-inherited `check-delivery-speed.mjs` can compare a built site's delivery with
-an explicitly recorded baseline; there is no copied product baseline.
+`agent-development.config.json` uses the `implementation` phase with the
+application build, tests and production-script checks in `projectChecks`.
+Keep these commands aligned with the application. `check-delivery-speed.mjs`
+compares the built site's delivery with the measured wishlist baseline in
+`docs/delivery-baseline.json`; explain any intentional baseline update in the PR.
 
 ## Pull request review
 
@@ -45,13 +45,11 @@ Fix P0–P2 findings and request a new review after any head change. Resolve eve
 review thread. Merge only with current green required checks and a mergeable
 PR; never spoof checks or bypass protection.
 
-GitHub Free does not enforce branch protection for this private repository.
-Enabling server-side required checks and conversation resolution requires
-GitHub Pro. Until then, the agent workflow and scheduled task still require
+The repository is public. The agent workflow and scheduled task require
 `validate`, `osv-scan`, and `Codex Review` to pass before merging; these are
 development policy, not an installed server-side protection rule.
 
-The GitHub Codex integration must have access to this private repository to
+The GitHub Codex integration must have access to this repository to
 respond to requests. These workflows validate real review evidence; they do
 not run an AI model themselves or require a copied API secret.
 

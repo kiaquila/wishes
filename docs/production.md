@@ -40,7 +40,7 @@ An ordinary PR run and a direct main push cannot publish the site. The
 deployment job uses the existing Tailscale workload identity pattern with
 `tag:ci`, then a separate wishes-only SSH key. The forced-command entrypoint
 accepts only `deploy <full-sha>`: no shell, file upload or forwarding. A
-root-owned wrapper fetches the private repository using a separate read-only
+root-owned wrapper fetches the repository using a separate read-only
 source key, checks current main again under a lock, rejects symlinks in the
 static tree, and publishes an atomic release. Stale queued jobs fail safely.
 The final check compares every live site's file with its reviewed source.

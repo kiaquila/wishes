@@ -26,7 +26,7 @@ test('the built wishlist ships all photos, thumbnails, fonts and referenced reso
     assert.ok(content.length > 0, `${path} must ship in the build`);
     if (path.endsWith('.webp')) assert.equal(content.subarray(8, 12).toString(), 'WEBP');
   }
-  assert.equal(items.length, 23);
+  assert.equal(items.length, 25);
   assert.match(items.find(item => item.id === 'hydrogel-patches').description, /Faberlic Oceanum/);
   assert.doesNotMatch(html, /data-view="landscape"|Selected projects/i);
 });
@@ -65,7 +65,7 @@ test('every responsive photo shares the uncropped 3:2 frame and accurate intrins
 
 test('shop links preserve the requested products and kimono variant', () => {
   const linked = items.filter(item => item.url);
-  assert.deepEqual(linked.map(item => item.id), ['rose-jam', 'crane-kimono', 'k18-hair-mask', 'rare-beauty-highlighter', 'janssen-cleanser', 'kaws-universe-set', 'davines-solu-scrub']);
+  assert.deepEqual(linked.map(item => item.id), ['rose-jam', 'crane-kimono', 'k18-hair-mask', 'rare-beauty-highlighter', 'janssen-cleanser', 'kaws-universe-set', 'davines-solu-scrub', 'airpods-5']);
   const kimono = linked.find(item => item.id === 'crane-kimono');
   assert.match(kimono.description, /Размер M/);
   const url = new URL(kimono.url);
@@ -86,6 +86,13 @@ test('shop links preserve the requested products and kimono variant', () => {
   const scrub = linked.find(item => item.id === 'davines-solu-scrub');
   assert.equal(scrub.url, 'https://www.caretobeauty.com/ar/en/davines-solu-sea-salt-scrub-cleanser-250ml/');
   assert.equal(scrub.description, 'SOLU Sea Salt Scrub Cleanser, 250 мл');
+  const airpods = linked.find(item => item.id === 'airpods-5');
+  assert.equal(airpods.url, 'https://www.apple.com/shop/buy-airpods/airpods-5/with-wireless-charging-case');
+  assert.match(airpods.title, /AirPods 5/);
+  assert.match(airpods.description, /Wireless Charging Case.*увеличенным временем работы/);
+  const bike = items.find(item => item.id === 'white-city-bike');
+  assert.equal(bike.title, 'Белый городской велосипед с корзиной');
+  assert.equal(bike.description, 'На рост 172 см');
   assert.equal(items.find(item => item.id === 'hooded-cape').title, 'Такая накидка с капюшоном');
 });
 

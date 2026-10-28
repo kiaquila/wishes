@@ -2,8 +2,12 @@
 
 Personal wishlist with a portfolio-style carousel and a grid of 3:2 photos. The wishes
 include rose petal jam, hydrogel eye patches, a crane kimono in size M and an
-embroidered velvet pouch. The page uses plain HTML, CSS and JavaScript with
+embroidered velvet pouch. They also include AirPods 5 with the Wireless Charging
+Case (the longer battery life version) and a white city bicycle with a basket
+for a rider who is 172 cm tall. The page uses plain HTML, CSS and JavaScript with
 locally hosted Manrope fonts matching the supplied KS Design reference.
+
+The source repository is public at `https://github.com/kiaquila/wishes`.
 
 ```bash
 npm run dev

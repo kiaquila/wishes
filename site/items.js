@@ -184,6 +184,15 @@ export const items = [
     image: '/assets/white-city-bike-1536.webp',
     alt: 'Белый городской велосипед с низкой рамой и передней корзиной с ромашками',
   },
+  {
+    id: 'horse-riding-for-two',
+    title: 'Прогулка на лошадях на двоих',
+    description: '',
+    image: '/assets/horse-riding-for-two-1200.webp',
+    width: 1200,
+    height: 800,
+    alt: 'Двое всадников на лошадях у озера на закате',
+  },
 ];
 
 export const views = ['gallery', 'square'];

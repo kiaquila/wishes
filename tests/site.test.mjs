@@ -21,7 +21,7 @@ test('the built wishlist ships all photos, thumbnails, fonts and referenced reso
   const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
   const resources = [...html.matchAll(/\/(?:assets\/[\w.-]+|styles\.css|app\.js|items\.js)/g)].map(match => match[0]);
   const photos = items.flatMap(item => [item.image, `/assets/${item.id}-768.webp`, `/assets/${item.id}-192.webp`]);
-  for (const path of [...resources, ...photos, '/items.js', '/assets/fonts/manrope-latin.woff2', '/assets/fonts/manrope-cyrillic.woff2']) {
+  for (const path of [...resources, ...photos, '/items.js', '/assets/fonts/manrope-latin.woff2', '/assets/fonts/manrope-cyrillic.woff2', '/assets/fonts/caveat-art.woff2']) {
     const content = await readFile(new URL(`../dist${path}`, import.meta.url));
     assert.ok(content.length > 0, `${path} must ship in the build`);
     if (path.endsWith('.webp')) assert.equal(content.subarray(8, 12).toString(), 'WEBP');
@@ -29,6 +29,30 @@ test('the built wishlist ships all photos, thumbnails, fonts and referenced reso
   assert.equal(items.length, 26);
   assert.match(items.find(item => item.id === 'hydrogel-patches').description, /Faberlic Oceanum/);
   assert.doesNotMatch(html, /data-view="landscape"|Selected projects/i);
+});
+
+test('the header wordmark matches ks design.art and is announced as its name', async () => {
+  const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
+  const css = await readFile(new URL('../dist/styles.css', import.meta.url), 'utf8');
+  const brand = html.match(/<a class="brand"[\s\S]*?<\/a>/)?.[0];
+  assert.ok(brand, 'the header wordmark is missing');
+  assert.match(brand, /href="https:\/\/ks-design\.art"/);
+  assert.match(brand, /<span class="brand-dot" aria-hidden="true"><\/span>/);
+  assert.doesNotMatch(brand, /aria-label=/, 'the visible wordmark gives the link its name');
+  assert.equal(brand.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(), 'ks design.art');
+  const art = css.match(/\.brand-art \{[^}]*\}/)?.[0];
+  assert.ok(art, 'the .brand-art rule is missing');
+  assert.match(art, /font-family: Caveat,/);
+  assert.match(art, /font-weight: 600/);
+  assert.match(art, /letter-spacing: 0;/);
+  assert.match(art, /text-transform: none/);
+  assert.match(css, /\.brand \{[^}]*text-transform: uppercase[^}]*white-space: nowrap/);
+  const face = css.match(/@font-face \{[^}]*font-family: Caveat;[^}]*\}/)?.[0];
+  assert.ok(face, 'the Caveat face is missing');
+  assert.match(face, /caveat-art\.woff2/);
+  /* Without the space the subset is not the "first available font", so the
+     line box takes a fallback face's metrics and "art" drops 3px. */
+  assert.match(face, /unicode-range: U\+20,/);
 });
 
 function webpDimensions(bytes) {

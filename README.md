@@ -6,7 +6,8 @@ embroidered velvet pouch. They also include AirPods 5 with the Wireless Charging
 Case (the longer battery life version) and a white city bicycle with a basket
 for a rider who is 172 cm tall, plus a horseback ride for two. The page uses plain
 HTML, CSS and JavaScript with locally hosted Manrope fonts matching the supplied
-KS Design reference.
+KS Design reference, plus a three-letter Caveat subset for the “art” of the
+ks design.art wordmark.
 
 The source repository is public at `https://github.com/kiaquila/wishes`.
 

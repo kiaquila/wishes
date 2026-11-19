@@ -4,10 +4,11 @@ The supplied portfolio screenshot and live `https://ks-design.art/` are the
 visual references: white background, thin header divider, Manrope typography,
 light-grey cards, small adjacent previews and simple outline arrow controls.
 
-The 68px header restores the KS DESIGN wordmark and its gradient dot. Plain
-WISHLIST text is centred geometrically and matches the original navigation:
-Manrope, 12.48px, weight 600 and 0.14em letter spacing. Both font subsets are
-hosted locally with their OFL licence; no third-party font request is needed.
+The 68px header carries the ks design.art wordmark from the portfolio (see
+“Wordmark update — 2026-11-19” below). Plain WISHLIST text was centred
+geometrically and matched the original navigation: Manrope, 12.48px, weight
+600 and 0.14em letter spacing. All font subsets are hosted locally with their
+OFL licences; no third-party font request is needed.
 
 There are two layouts: slider and square grid. Previously saved rectangular
 layouts fall back to the slider. The selected desktop card is slightly larger
@@ -349,3 +350,26 @@ metadata. Delivery measures 865ms first paint and 1074ms full load against the
 unchanged 1066ms / 1271ms baseline. As in main's browser-test change, this model
 counts the initial HTML preview; the browser suite verifies the subsequent
 JavaScript-requested full photo separately.
+
+## Wordmark update — 2026-11-19
+
+The header mark now matches the portfolio's new ks design.art wordmark
+(`kiaquila/ks` PR #51, live on `https://ks-design.art/`): tracked KS DESIGN
+caps, the cornflower dot as the domain's full stop and “art” written in Caveat
+600 at 1.95em, rotated −5° around its foot. The markup, sizes, margins,
+`line-height: 1.62` and `-webkit-font-smoothing: antialiased` mirror the
+portfolio so the mark renders the same; a visually hidden “.” keeps the
+link's spoken name “ks design.art”.
+
+Caveat ships as `caveat-art.woff2` (2,160 bytes): the portfolio's Caveat file
+subset to the space, a, r and t with all layout features kept, under the OFL
+in `caveat-license.txt`. The space has to stay in the file and in its
+`unicode-range`: without it the subset is not the first available font, the
+line box takes another face's metrics and “art” sits 3px lower.
+
+The phone-only 11px override from the first build, when WISHLIST still shared
+the header, is removed: the mark is the portfolio's 12.48px at every width.
+
+Playwright comparison against live ks-design.art at 1440×900 and 390×844
+(@3x): wordmark, dot and “art” boxes match to 0.01px; the element screenshots
+differ in 0 pixels on desktop and 2 antialiasing pixels on the phone.

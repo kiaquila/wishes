@@ -121,6 +121,30 @@ async function assertFits(page, label) {
 const next = page => page.locator('[data-direction="1"]').click();
 const previous = page => page.locator('[data-direction="-1"]').click();
 
+test('canonical logo loads through the preview server on desktop and phones', async t => {
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 },
+    { width: 320, height: 740 }, { width: 844, height: 390 }]) {
+    const { page, context } = await openCarousel(t, viewport);
+    for (const variant of ['light', 'dark']) {
+      const response = await context.request.get(`${origin}/assets/brand/ks-design-art-on-${variant}.svg`);
+      assert.equal(response.status(), 200);
+      assert.equal(response.headers()['content-type'], 'image/svg+xml');
+    }
+    await page.goto(origin, { waitUntil: 'domcontentloaded' });
+    const logo = page.locator('img[alt="ks-design.art"]');
+    await logo.evaluate(img => img.decode());
+    const geometry = await logo.evaluate(img => {
+      const { width, height, x, right } = img.getBoundingClientRect();
+      return { width, height, x, right, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight };
+    });
+    assert.equal(geometry.naturalWidth, 121);
+    assert.equal(geometry.naturalHeight, 20);
+    assert.equal(geometry.width, 121);
+    assert.equal(geometry.height, 20);
+    assert.ok(geometry.x >= 0 && geometry.right <= viewport.width, 'logo fits the viewport');
+  }
+});
+
 test('cold slow load shows the first preview before its full photo, without moving the card', { timeout: 20000 }, async t => {
   const { page, context } = await openCarousel(t);
   const photos = await holdPhotos(context, 100);

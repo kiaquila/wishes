@@ -14,14 +14,7 @@
   font-display: swap;
   unicode-range: U+301,U+400-45F,U+490-491,U+4B0-4B1,U+2116;
 }
-@font-face {
-  font-family: Caveat;
-  src: url('/assets/fonts/caveat-art.woff2') format('woff2');
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+20,U+61,U+72,U+74;
-}
+
 :root {
   color-scheme: light;
   font-family: Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -47,9 +40,8 @@ button:focus-visible, a:focus-visible, .gallery:focus-visible { outline: 2px sol
   padding-inline: var(--edge);
   display: grid; grid-template-columns: 1fr auto; align-items: center;
 }
-.brand { display: inline-flex; align-items: center; min-height: 44px; font-size: .78rem; font-weight: 700; line-height: 1.62; letter-spacing: .14em; text-transform: uppercase; -webkit-font-smoothing: antialiased; justify-self: start; white-space: nowrap; text-decoration: none; }
-.brand-dot { display: inline-block; width: .4em; height: .4em; border-radius: 50%; background: linear-gradient(135deg,#818cf8,#22d3ee); margin: 0 .08em 0 .02em; }
-.brand-art { display: inline-block; margin-left: .02em; font-family: Caveat, 'Bradley Hand', 'Segoe Print', cursive; font-weight: 600; font-size: 1.95em; line-height: 0; letter-spacing: 0; text-transform: none; transform: rotate(-5deg) translateY(.02em); transform-origin: 0 100%; }
+.brand { display: inline-flex; align-items: center; min-height: 44px; justify-self: start; white-space: nowrap; text-decoration: none; }
+.brand-logo { display: block; width: 121px; height: 20px; max-width: none; flex-shrink: 0; }
 h1 { margin: 0; color: #55565a; font-size: .78rem; font-weight: 600; letter-spacing: .14em; line-height: 1.62; }
 .view-switch { display: flex; gap: 6px; justify-self: end; }
 .view-switch button {

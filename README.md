@@ -6,8 +6,8 @@ embroidered velvet pouch. They also include AirPods 5 with the Wireless Charging
 Case (the longer battery life version) and a white city bicycle with a basket
 for a rider who is 172 cm tall, plus a horseback ride for two. The page uses plain
 HTML, CSS and JavaScript with locally hosted Manrope fonts matching the supplied
-KS Design reference, plus a three-letter Caveat subset for the “art” of the
-ks design.art wordmark.
+KS Design reference. The `ks-design.art` wordmark uses canonical SVG outlines
+and no longer loads a separate script font.
 
 The source repository is public at `https://github.com/kiaquila/wishes`.
 
@@ -47,3 +47,10 @@ check the carousel and disclaimer at desktop, mobile and short-screen sizes.
 See `AGENTS.md`, `docs/agent-development.md`, and `docs/security.md` for the
 development workflow. Implementation mode builds and checks the wishlist,
 tests the harness and compares delivery with the first measured site baseline.
+
+## Shared logo assets
+
+The header uses the canonical outlined `ks-design.art` SVG from `kiaquila/ks`,
+at 121 × 20 CSS pixels on desktop and mobile. Both theme exports are copied
+without edits; white ink is used on dark surfaces. The dot stays unchanged.
+See `docs/logo-assets.json` for source paths and SHA-256 hashes.

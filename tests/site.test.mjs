@@ -37,9 +37,9 @@ test('the header wordmark uses the accessible canonical SVG at its native size',
   const brand = html.match(/<a class="brand"[\s\S]*?<\/a>/)?.[0];
   assert.ok(brand);
   assert.match(brand, /href="https:\/\/ks-design\.art"/);
-  assert.match(brand, /src="\/assets\/brand\/ks-design-art-on-light\.svg" alt="ks-design\.art" width="121" height="20"/);
+  assert.match(brand, /src="\/assets\/brand\/ks-design-art-on-light\.svg" alt="ks design\.art" width="118" height="20"/);
   assert.doesNotMatch(brand, /brand-art|brand-dot/);
-  assert.match(css, /\.brand-logo \{[^}]*width: 121px; height: 20px;/);
+  assert.match(css, /\.brand-logo \{[^}]*width: 118px; height: 20px;/);
 });
 
 function webpDimensions(bytes) {

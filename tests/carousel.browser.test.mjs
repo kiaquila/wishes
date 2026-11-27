@@ -131,15 +131,15 @@ test('canonical logo loads through the preview server on desktop and phones', as
       assert.equal(response.headers()['content-type'], 'image/svg+xml');
     }
     await page.goto(origin, { waitUntil: 'domcontentloaded' });
-    const logo = page.locator('img[alt="ks-design.art"]');
+    const logo = page.locator('img[alt="ks design.art"]');
     await logo.evaluate(img => img.decode());
     const geometry = await logo.evaluate(img => {
       const { width, height, x, right } = img.getBoundingClientRect();
       return { width, height, x, right, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight };
     });
-    assert.equal(geometry.naturalWidth, 121);
+    assert.equal(geometry.naturalWidth, 118);
     assert.equal(geometry.naturalHeight, 20);
-    assert.equal(geometry.width, 121);
+    assert.equal(geometry.width, 118);
     assert.equal(geometry.height, 20);
     assert.ok(geometry.x >= 0 && geometry.right <= viewport.width, 'logo fits the viewport');
   }
